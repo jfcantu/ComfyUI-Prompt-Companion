@@ -1,0 +1,24 @@
+{
+    "$id": "urn:jfcantu:comfyui-prompt-companion-config",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "ComfyUI Prompt Companion Config",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string"
+            },
+            "trigger_words": {
+                "type": "string"
+            },
+            "prompt_addition_text": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "name"
+        ]
+    },
+    "additionalProperties": false
+}
