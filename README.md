@@ -24,7 +24,7 @@ This will be available once I'm happy enough with this node to publish it to the
 1. Clone this repository to your ComfyUI custom nodes directory:
    ```bash
    cd ComfyUI/custom_nodes/
-   git clone [repository-url] ComfyUI-Prompt-Companion
+   git clone https://github.com/jfcantu/ComfyUI-Prompt-Companion.git
    ```
 2. Restart ComfyUI
 3. The Prompt Companion node will be available in the `jfc` category
