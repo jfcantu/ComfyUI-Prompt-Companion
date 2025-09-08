@@ -2,23 +2,83 @@
     "$id": "urn:jfcantu:comfyui-prompt-companion-config",
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "ComfyUI Prompt Companion Config",
-    "type": "array",
-    "items": {
-        "type": "object",
-        "properties": {
-            "name": {
-                "type": "string"
-            },
-            "trigger_words": {
-                "type": "string"
-            },
-            "prompt_addition_text": {
-                "type": "string"
+    "type": "object",
+    "properties": {
+        "prompt_additions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "trigger_words": {
+                        "type": "string"
+                    },
+                    "positive_prompt_addition_text": {
+                        "type": "string"
+                    },
+                    "negative_prompt_addition_text": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ]
             }
         },
-        "required": [
-            "name"
-        ]
+        "prompt_groups": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "trigger_words": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "additions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "addition_id": {
+                                    "type": "integer"
+                                },
+                                "priority": {
+                                    "type": "integer"
+                                }
+                            },
+                            "required": [
+                                "addition_id",
+                                "priority"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "trigger_words",
+                    "additions"
+                ]
+            }
+        }
     },
+    "required": [
+        "prompt_additions",
+        "prompt_groups"
+    ],
     "additionalProperties": false
 }
