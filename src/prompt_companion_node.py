@@ -16,6 +16,96 @@ except ImportError:
     PROMPT_ADDITIONS = None
 
 
+class PromptAdditionInput:
+    """Custom data type for prompt addition input with positive and negative fields."""
+    
+    def __init__(self, positive_prompt_addition: str = "", negative_prompt_addition: str = ""):
+        self.positive_prompt_addition = positive_prompt_addition
+        self.negative_prompt_addition = negative_prompt_addition
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "combine_mode": (
+                    ["prepend", "append"], 
+                    {
+                        "default": "prepend",
+                        "tooltip": "Whether to combine input addition before (prepend) or after (append) the current additions."
+                    }
+                ),
+                "positive_prompt_addition": ("STRING", {
+                    "multiline": True,
+                    "default": "",
+                    "tooltip": "Positive prompt addition text"
+                }),
+                "negative_prompt_addition": ("STRING", {
+                    "multiline": True, 
+                    "default": "",
+                    "tooltip": "Negative prompt addition text"
+                }),
+            },
+            "optional": {
+                "prompt_addition": (
+                    "PROMPT_ADDITION",
+                    {
+                        "tooltip": "Optional prompt addition input to combine with the current additions."
+                    }
+                ),
+            }
+        }
+    
+    RETURN_TYPES = ("PROMPT_ADDITION",)
+    FUNCTION = "create_prompt_addition"
+    CATEGORY = "jfc"
+    
+    def create_prompt_addition(self, combine_mode: str, positive_prompt_addition: str, negative_prompt_addition: str, prompt_addition: 'PromptAdditionInput' = None):
+        # Get the input values
+        input_positive = ""
+        input_negative = ""
+        
+        if prompt_addition:
+            input_positive = prompt_addition.positive_prompt_addition or ""
+            input_negative = prompt_addition.negative_prompt_addition or ""
+        
+        # Combine the values based on combine_mode
+        final_positive = ""
+        final_negative = ""
+        
+        if combine_mode == "prepend":
+            # Input first, then current additions
+            if input_positive and positive_prompt_addition:
+                final_positive = f"{input_positive}, {positive_prompt_addition}"
+            elif input_positive:
+                final_positive = input_positive
+            elif positive_prompt_addition:
+                final_positive = positive_prompt_addition
+                
+            if input_negative and negative_prompt_addition:
+                final_negative = f"{input_negative}, {negative_prompt_addition}"
+            elif input_negative:
+                final_negative = input_negative
+            elif negative_prompt_addition:
+                final_negative = negative_prompt_addition
+        else:  # append
+            # Current additions first, then input
+            if positive_prompt_addition and input_positive:
+                final_positive = f"{positive_prompt_addition}, {input_positive}"
+            elif positive_prompt_addition:
+                final_positive = positive_prompt_addition
+            elif input_positive:
+                final_positive = input_positive
+                
+            if negative_prompt_addition and input_negative:
+                final_negative = f"{negative_prompt_addition}, {input_negative}"
+            elif negative_prompt_addition:
+                final_negative = negative_prompt_addition
+            elif input_negative:
+                final_negative = input_negative
+        
+        return (PromptAdditionInput(final_positive, final_negative),)
+
+
 class PromptCompanion:
     """
     ComfyUI node for combining prompts with additions and groups.
@@ -27,9 +117,9 @@ class PromptCompanion:
     """
     
     # ComfyUI node metadata
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING", "PROMPT_ADDITION")
     RETURN_NAMES = ("ckpt_name", "positive_combined_prompt", "negative_combined_prompt", 
-                   "positive_addition", "negative_addition")
+                   "positive_addition", "negative_addition", "prompt_addition")
     FUNCTION = "combine_prompts"
     OUTPUT_NODE = True
     CATEGORY = "jfc"
@@ -130,6 +220,14 @@ class PromptCompanion:
                     }
                 ),
             },
+            "optional": {
+                "prompt_addition": (
+                    "PROMPT_ADDITION",
+                    {
+                        "tooltip": "Optional prompt addition input that will be prepended to the final positive/negative additions."
+                    }
+                ),
+            },
         }
 
     def combine_prompts(
@@ -145,7 +243,8 @@ class PromptCompanion:
         negative_addition: str,
         positive_prompt: str,
         negative_prompt: str,
-    ) -> Tuple[str, str, str, str, str]:
+        prompt_addition: PromptAdditionInput = None,
+    ) -> Tuple[str, str, str, str, str, PromptAdditionInput]:
         """
         Combine base prompts with additions based on the selected mode.
         
@@ -161,13 +260,14 @@ class PromptCompanion:
             negative_addition: Negative addition text
             positive_prompt: Base positive prompt
             negative_prompt: Base negative prompt
+            prompt_addition: Optional PromptAdditionInput to prepend to final additions
             
         Returns:
-            Tuple of (ckpt_name, positive_combined, negative_combined, positive_addition, negative_addition)
+            Tuple of (ckpt_name, positive_combined, negative_combined, positive_addition, negative_addition, prompt_addition)
         """
         # Always return ckpt_name first
         if not enable_addition:
-            return (ckpt_name, positive_prompt, negative_prompt, "", "")
+            return (ckpt_name, positive_prompt, negative_prompt, "", "", PromptAdditionInput("", ""))
 
         # Calculate addition values based on type
         calculated_positive_addition = ""
@@ -182,6 +282,20 @@ class PromptCompanion:
                 prompt_group_mode, prompt_addition_group, ckpt_name
             )
 
+        # Prepend prompt_addition input values to calculated additions if provided
+        if prompt_addition:
+            if prompt_addition.positive_prompt_addition:
+                if calculated_positive_addition:
+                    calculated_positive_addition = f"{prompt_addition.positive_prompt_addition}, {calculated_positive_addition}"
+                else:
+                    calculated_positive_addition = prompt_addition.positive_prompt_addition
+                    
+            if prompt_addition.negative_prompt_addition:
+                if calculated_negative_addition:
+                    calculated_negative_addition = f"{prompt_addition.negative_prompt_addition}, {calculated_negative_addition}"
+                else:
+                    calculated_negative_addition = prompt_addition.negative_prompt_addition
+
         # Combine additions with base prompts using combine_mode
         final_positive_combined, final_negative_combined = self._combine_prompts_with_additions(
             positive_prompt, negative_prompt,
@@ -189,12 +303,19 @@ class PromptCompanion:
             combine_mode
         )
 
+        # Create PromptAdditionInput output with the calculated additions
+        output_prompt_addition = PromptAdditionInput(
+            calculated_positive_addition,
+            calculated_negative_addition
+        )
+        
         return (
             ckpt_name,
             final_positive_combined,
             final_negative_combined,
             calculated_positive_addition,
-            calculated_negative_addition
+            calculated_negative_addition,
+            output_prompt_addition
         )
 
     def _get_individual_additions(
@@ -364,9 +485,11 @@ class PromptCompanion:
 
 # Node registration mapping
 NODE_CLASS_MAPPINGS = {
-    "PromptCompanion": PromptCompanion
+    "PromptCompanion": PromptCompanion,
+    "PromptAdditionInput": PromptAdditionInput
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "PromptCompanion": "Prompt Companion"
+    "PromptCompanion": "Prompt Companion",
+    "PromptAdditionInput": "Prompt Companion: Create Prompt Addition"
 }

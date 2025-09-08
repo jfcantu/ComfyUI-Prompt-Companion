@@ -1368,9 +1368,40 @@ class PromptAdditionManager extends ComfyDialog {
             this.updateStatus(`Selected: ${name}`);
         }
     }
+    
+    clearSelection() {
+        // Clear current selection
+        this.selectedAdditionName = null;
+        this.originalAdditionData = {};
+        
+        // Clear text boxes
+        this.positiveTextarea.value = "";
+        this.negativeTextarea.value = "";
+        
+        // Remove visual selection from list
+        const previousSelected = this.additionsList.querySelector(".selected");
+        if (previousSelected) {
+            previousSelected.classList.remove("selected");
+            previousSelected.style.backgroundColor = "#3a3a3a";
+            previousSelected.style.borderColor = "transparent";
+        }
+        
+        // Update button states
+        this.deleteButton.disabled = true;
+        this.renameButton.disabled = true;
+        this.revertPositiveButton.disabled = true;
+        this.revertNegativeButton.disabled = true;
+        // Save and Save As buttons remain enabled (they can create new additions)
+        // OK button remains enabled (can close dialog)
+        
+        this.updateStatus("Ready to create new prompt addition");
+    }
 
     async createNew() {
         console.log("createNew() called");
+        
+        // First, clear the selection and text boxes for a fresh start
+        this.clearSelection();
         
         try {
             const name = await this.promptForName("Create New Prompt Addition", "Enter name for new prompt addition:");
