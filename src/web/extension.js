@@ -219,6 +219,28 @@ app.registerExtension({
                 }
             };
             
+            // Add cleanup method for proper memory management
+            // Save the original onRemoved method before overriding
+            const originalOnRemoved = nodeType.prototype.onRemoved;
+            
+            nodeType.prototype.onRemoved = function() {
+                // Clean up event listeners to prevent memory leaks
+                if (this.eventListener) {
+                    api.removeEventListener("prompt-companion.addition-list", this.eventListener);
+                    this.eventListener = null;
+                }
+                
+                // Clean up any other references
+                this.promptAdditions = null;
+                this.promptAdditionNames = null;
+                this.promptGroups = null;
+                
+                // Call original cleanup if it exists
+                if (originalOnRemoved) {
+                    originalOnRemoved.call(this);
+                }
+            };
+            
             nodeType.prototype.updatePromptTextboxVisibility = function (node) {
                 // Check if positive_prompt input is connected
                 const positivePromptConnected = node.inputs && node.inputs.some(input => 
@@ -309,6 +331,155 @@ app.registerExtension({
                 }
             };
             
+            nodeType.prototype.saveCurrentConfiguration = function() {
+                try {
+                    // Get current addition text values (not prompt text)
+                    const positiveAdditionText = this.positiveAdditionWidget?.value || "";
+                    const negativeAdditionText = this.negativeAdditionWidget?.value || "";
+                    
+                    if (!positiveAdditionText && !negativeAdditionText) {
+                        // Use ComfyUI-style notification instead of alert
+                        if (app.ui && app.ui.dialog && app.ui.dialog.show) {
+                            app.ui.dialog.show("No prompt additions to save. Please add some text to the positive or negative addition fields.");
+                        } else {
+                            console.warn("No prompt additions to save. Please add some text to the positive or negative addition fields.");
+                        }
+                        return;
+                    }
+                    
+                    // Check if we have a selected addition name to save to
+                    const currentAdditionName = this.promptAdditionNameWidget?.value;
+                    
+                    if (currentAdditionName && currentAdditionName.trim()) {
+                        // Use the existing name - this is a regular "Save" operation
+                        const config = {
+                            name: currentAdditionName.trim(),
+                            positive_prompt_addition_text: positiveAdditionText,
+                            negative_prompt_addition_text: negativeAdditionText,
+                            trigger_words: ""
+                        };
+                        
+                        // Create a new prompt addition
+                        const promptData = {
+                            prompt_additions: Object.values(this.promptAdditions || {}),
+                            prompt_groups: this.promptGroups || []
+                        };
+                        
+                        const manager = new PromptAdditionManager(promptData, this);
+                        manager.quickSave(config);
+                        
+                    } else {
+                        // No addition selected - prompt for a name (like "Save As")
+                        const suggestedName = positiveAdditionText ? 
+                            positiveAdditionText.trim().split(/\s+/).slice(0, 3).join(" ") : 
+                            "New Addition";
+                        
+                        const showNamePrompt = async () => {
+                            return new Promise((resolve) => {
+                                if (app.ui && app.ui.dialog && app.ui.dialog.prompt) {
+                                    app.ui.dialog.prompt("Enter a name for this prompt addition:", suggestedName)
+                                        .then(name => resolve(name))
+                                        .catch(() => resolve(null));
+                                } else {
+                                    // Fallback to browser prompt if ComfyUI dialog not available
+                                    const name = prompt("Enter a name for this prompt addition:", suggestedName);
+                                    resolve(name);
+                                }
+                            });
+                        };
+                        
+                        showNamePrompt().then(name => {
+                            if (!name) return;
+                            
+                            const config = {
+                                name: name,
+                                positive_prompt_addition_text: positiveAdditionText,
+                                negative_prompt_addition_text: negativeAdditionText,
+                                trigger_words: ""
+                            };
+                            
+                            // Create a new prompt addition
+                            const promptData = {
+                                prompt_additions: Object.values(this.promptAdditions || {}),
+                                prompt_groups: this.promptGroups || []
+                            };
+                            
+                            const manager = new PromptAdditionManager(promptData, this);
+                            manager.quickSave(config);
+                        });
+                    }
+                    
+                } catch (error) {
+                    console.error("Error saving configuration:", error);
+                    // Use ComfyUI-style notification instead of alert
+                    if (app.ui && app.ui.dialog && app.ui.dialog.show) {
+                        app.ui.dialog.show("Error saving configuration: " + error.message);
+                    } else {
+                        console.error("Error saving configuration: " + error.message);
+                    }
+                }
+            };
+            
+            nodeType.prototype.saveAsConfiguration = function() {
+                try {
+                    // Get current addition text values (not prompt text)
+                    const config = {
+                        positive_prompt_addition_text: this.positiveAdditionWidget?.value || "",
+                        negative_prompt_addition_text: this.negativeAdditionWidget?.value || "",
+                        trigger_words: ""
+                    };
+                    
+                    if (!config.positive_prompt_addition_text && !config.negative_prompt_addition_text) {
+                        // Use ComfyUI-style notification instead of alert
+                        if (app.ui && app.ui.dialog && app.ui.dialog.show) {
+                            app.ui.dialog.show("No prompt additions to save. Please add some text to the positive or negative addition fields.");
+                        } else {
+                            console.warn("No prompt additions to save. Please add some text to the positive or negative addition fields.");
+                        }
+                        return;
+                    }
+                    
+                    // Use ComfyUI-style prompt instead of browser prompt
+                    const showNamePrompt = async () => {
+                        return new Promise((resolve) => {
+                            if (app.ui && app.ui.dialog && app.ui.dialog.prompt) {
+                                app.ui.dialog.prompt("Enter a name for this prompt addition:", "New Addition")
+                                    .then(name => resolve(name))
+                                    .catch(() => resolve(null));
+                            } else {
+                                // Fallback to browser prompt if ComfyUI dialog not available
+                                const name = prompt("Enter a name for this prompt addition:", "New Addition");
+                                resolve(name);
+                            }
+                        });
+                    };
+                    
+                    showNamePrompt().then(name => {
+                        if (!name) return;
+                        
+                        config.name = name;
+                        
+                        // Create a new prompt addition
+                        const promptData = {
+                            prompt_additions: Object.values(this.promptAdditions || {}),
+                            prompt_groups: this.promptGroups || []
+                        };
+                        
+                        const manager = new PromptAdditionManager(promptData, this);
+                        manager.quickSave(config);
+                    });
+                    
+                } catch (error) {
+                    console.error("Error saving configuration:", error);
+                    // Use ComfyUI-style notification instead of alert
+                    if (app.ui && app.ui.dialog && app.ui.dialog.show) {
+                        app.ui.dialog.show("Error saving configuration: " + error.message);
+                    } else {
+                        console.error("Error saving configuration: " + error.message);
+                    }
+                }
+            };
+
             nodeType.prototype.getExtraMenuOptions = function(_, options) {
                 console.log("getExtraMenuOptions called for PromptCompanion");
                 try {
@@ -375,9 +546,14 @@ app.registerExtension({
                 node.negativePromptWidget.origComputeSize = node.negativePromptWidget.computeSize;
             }
 
-            // Set up callbacks
+            // Set up callbacks with proper context binding
             if (node.ckptNameWidget) {
-                node.ckptNameWidget.callback = () => {
+                const originalCkptCallback = node.ckptNameWidget.callback;
+                node.ckptNameWidget.callback = function() {
+                    // Call original callback if it exists
+                    if (originalCkptCallback) {
+                        originalCkptCallback.apply(this, arguments);
+                    }
                     // Trigger automatic group data update if in Group mode with Automatic
                     if (node.additionTypeWidget?.value === "Group" && node.promptGroupModeWidget?.value === "Automatic (Trigger Words)") {
                         node.loadAutomaticGroupData(node);
@@ -386,19 +562,34 @@ app.registerExtension({
             }
             
             if (node.additionTypeWidget) {
-                node.additionTypeWidget.callback = () => {
+                const originalTypeCallback = node.additionTypeWidget.callback;
+                node.additionTypeWidget.callback = function() {
+                    // Call original callback if it exists
+                    if (originalTypeCallback) {
+                        originalTypeCallback.apply(this, arguments);
+                    }
                     node.updateWidgetVisibility(node);
                 };
             }
             
             if (node.promptGroupModeWidget) {
-                node.promptGroupModeWidget.callback = () => {
+                const originalGroupModeCallback = node.promptGroupModeWidget.callback;
+                node.promptGroupModeWidget.callback = function() {
+                    // Call original callback if it exists
+                    if (originalGroupModeCallback) {
+                        originalGroupModeCallback.apply(this, arguments);
+                    }
                     node.updateWidgetVisibility(node);
                 };
             }
             
             if (node.promptAdditionNameWidget) {
-                node.promptAdditionNameWidget.callback = () => {
+                const originalNameCallback = node.promptAdditionNameWidget.callback;
+                node.promptAdditionNameWidget.callback = function() {
+                    // Call original callback if it exists
+                    if (originalNameCallback) {
+                        originalNameCallback.apply(this, arguments);
+                    }
                     if (node.additionTypeWidget?.value === "Individual") {
                         node.loadSelectedAdditionData(node);
                     }
@@ -406,21 +597,36 @@ app.registerExtension({
             }
             
             if (node.promptAdditionGroupWidget) {
-                node.promptAdditionGroupWidget.callback = () => {
-                    if (node.additionTypeWidget?.value === "Group") {
+                const originalGroupCallback = node.promptAdditionGroupWidget.callback;
+                node.promptAdditionGroupWidget.callback = function() {
+                    // Call original callback if it exists
+                    if (originalGroupCallback) {
+                        originalGroupCallback.apply(this, arguments);
+                    }
+                    if (node.additionTypeWidget?.value === "Group" && node.promptGroupModeWidget?.value === "Manual") {
                         node.loadGroupAdditionData(node);
                     }
                 };
             }
 
+            // Add Save and Save As buttons
+            node.addWidget("button", "Save", "save", () => {
+                node.saveCurrentConfiguration();
+            });
+            
+            node.addWidget("button", "Save As", "save_as", () => {
+                node.saveAsConfiguration();
+            });
+
             // Load prompt data
             const promptAdditions = await ApiOperations.getPromptAdditions();
             node.updatePromptData(node, promptAdditions);
 
-            // Set up event listener for updates
-            api.addEventListener("prompt-companion.addition-list", event => {
+            // Set up event listener for updates with cleanup tracking
+            node.eventListener = (event) => {
                 node.updatePromptData(node, event.detail);
-            });
+            };
+            api.addEventListener("prompt-companion.addition-list", node.eventListener);
             
             // Connection change handler removed - keeping textboxes visible at all times
             

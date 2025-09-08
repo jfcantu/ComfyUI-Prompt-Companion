@@ -1,67 +1,129 @@
 # ComfyUI Prompt Companion
 
-A node that lets you save and reuse parts of prompts (embeddings, quality keywords, and so on.)
+A ComfyUI extension for managing and organizing prompt additions with support for individual prompts, prompt groups, and automatic trigger-word matching.
 
-> [!NOTE]
-> This projected was created with a [cookiecutter](https://github.com/Comfy-Org/cookiecutter-comfy-extension) template. It helps you start writing custom nodes without worrying about the Python setup.
+## 🚀 Features
 
-## Quickstart
+### Core Functionality
+- **Individual Prompt Management**: Create, edit, and organize individual prompt additions.
+- **Prompt Groups**: Group related prompt additons together for batch operations.
+- **Multiple Operation Modes**: Choose between applying an individual prompt addition, a specific group of prompt additions, or automatically apply groups of prompt additions based on the checkpoint name.
 
-1. Install [ComfyUI](https://docs.comfy.org/get_started).
-1. Install [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager)
-1. Look up this extension in ComfyUI-Manager. If you are installing manually, clone this repository under `ComfyUI/custom_nodes`.
-1. Restart ComfyUI.
+## 📦 Installation
 
-# Features
+### Quick Install (Recommended)
 
-- A list of features
+This will be available once I'm happy enough with this node to publish it to the repository.
 
-## Develop
+1. ~~Install [ComfyUI](https://docs.comfy.org/get_started)~~
+2. ~~Install [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager)~~
+3. ~~Look up "ComfyUI Prompt Companion" in ComfyUI-Manager and install~~
+4. ~~Restart ComfyUI~~
 
-To install the dev dependencies and pre-commit (will run the ruff hook), do:
+### Manual Install
+1. Clone this repository to your ComfyUI custom nodes directory:
+   ```bash
+   cd ComfyUI/custom_nodes/
+   git clone [repository-url] ComfyUI-Prompt-Companion
+   ```
+2. Restart ComfyUI
+3. The Prompt Companion node will be available in the `jfc` category
+
+## 🎯 Usage
+
+### Basic Setup
+
+1. **Add the Node**: Search for "PromptCompanion" in the node browser and add it to your workflow.
+
+2. **Configure Inputs**:
+   - `ckpt_name`: Select your checkpoint.
+   - `addition_type`: Choose "Individual" mode to select an individual prompt addition, or "Group" mode to apply one or more groups of prompt additions.
+   - `prompt_group_mode`: Only available in "Group" mode. Choose "Manual" to select a single prompt addition, or "Automatic" to apply multiple groups based on the checkpoint name.
+   - `combine_mode`: Specify whether your prompt additions go in front of your prompts (prepend) or after them (append).
+   - `prompt_addition_name`: Only available in "Individual" mode. Select the prompt addition to apply.
+   - `prompt_addition_group`: Only available in "Group" addition mode when "Manual" group mode is selected. Select a prompt addition group to apply.
+   - `positive_addition`/`negative_addition`:
+     - In Individual mode, you can edit your prompt addition here directly.
+     - In Group mode, this will display the collected prompt additions that will be applied, which cannot be edited.
+   - `positive_prompt`/`negative_prompt`: Your base prompts. Can be input from another node, or entered directly.
+   
+   
+
+### Managing Prompt Additions
+
+Start by right-clicking the node, and selecting "Edit Prompt Additions."
+
+#### Adding/Modifying Prompt Additions
+
+Pretty self-explanatory. Create, delete, modify, rename, save with a new name.
+
+#### Adding/Modifying Prompt Groups
+
+Click "Create New" to create a new one, or select one from the list to edit an exiting one.
+
+"Trigger words" are strings that Prompt Companion will look for in your checkpoint name/path. If they match any part of it, the prompt group will be included in the list of additions.
+
+While a prompt group is selected, select individual prompt additions to add/remove them from the prompt group.
+
+Select "(none)" or click "Cancel" to exit.
+
+**NOTE**: You can't edit prompt additions while editing a Prompt Group.
+
+## 🔧 Architecture
+
+### Frontend Components
+- **`extension.js`**: Main ComfyUI extension registration and node behavior
+- **`promptAdditionManager.js`**: Dialog manager for CRUD operations
+- **`api-operations.js`**: HTTP client for backend communication
+- **`state-manager.js`**: Centralized state management with event system
+
+### Backend Components
+- **`nodes.py`**: ComfyUI node definition and API endpoints
+- **`extension_config.py`**: Data models and configuration management
+- **`config-schema.json`**: JSON schema for data validation
+
+### Debug Mode
+
+Enable debug logging by opening browser developer tools:
+
+```javascript
+// Check current state
+console.log(window.promptState?.getState());
+```
+
+## 🧪 Development
+
+### Setup
+
+To install the dev dependencies and pre-commit:
 
 ```bash
-cd prompt_companion
+cd ComfyUI-Prompt-Companion
 pip install -e .[dev]
 pre-commit install
 ```
 
-The `-e` flag above will result in a "live" install, in the sense that any changes you make to your node extension will automatically be picked up the next time you run ComfyUI.
+### Project Structure
 
-## Publish to Github
-
-Install Github Desktop or follow these [instructions](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) for ssh.
-
-1. Create a Github repository that matches the directory name. 
-2. Push the files to Git
 ```
-git add .
-git commit -m "project scaffolding"
-git push
-``` 
+ComfyUI-Prompt-Companion/
+├── src/
+│   ├── web/                     # Frontend JavaScript modules
+│   │   ├── extension.js         # Main ComfyUI extension
+│   │   ├── promptAdditionManager.js  # UI dialog manager
+│   │   ├── api-operations.js    # HTTP client
+│   │   └── state-manager.js     # State management
+│   ├── nodes.py                 # Backend node and API
+│   ├── extension_config.py      # Data models and config
+│   └── config-schema.json       # Data validation schema
+├── __init__.py                  # Python module initialization
+└── README.md                    # This file
+```
 
-## Writing custom nodes
+## 🤝 Contributing
 
-An example custom node is located in [node.py](src/prompt_companion/nodes.py). To learn more, read the [docs](https://docs.comfy.org/essentials/custom_node_overview).
-
-
-## Tests
-
-This repo contains unit tests written in Pytest in the `tests/` directory. It is recommended to unit test your custom node.
-
-- [build-pipeline.yml](.github/workflows/build-pipeline.yml) will run pytest and linter on any open PRs
-- [validate.yml](.github/workflows/validate.yml) will run [node-diff](https://github.com/Comfy-Org/node-diff) to check for breaking changes
-
-## Publishing to Registry
-
-If you wish to share this custom node with others in the community, you can publish it to the registry. We've already auto-populated some fields in `pyproject.toml` under `tool.comfy`, but please double-check that they are correct.
-
-You need to make an account on https://registry.comfy.org and create an API key token.
-
-- [ ] Go to the [registry](https://registry.comfy.org). Login and create a publisher id (everything after the `@` sign on your registry profile). 
-- [ ] Add the publisher id into the pyproject.toml file.
-- [ ] Create an api key on the Registry for publishing from Github. [Instructions](https://docs.comfy.org/registry/publishing#create-an-api-key-for-publishing).
-- [ ] Add it to your Github Repository Secrets as `REGISTRY_ACCESS_TOKEN`.
-
-A Github action will run on every git push. You can also run the Github action manually. Full instructions [here](https://docs.comfy.org/registry/publishing). Join our [discord](https://discord.com/invite/comfyorg) if you have any questions!
-
+1. Fork the repository
+2. Create a feature branch
+3. Make changes with proper documentation
+4. Add tests for new functionality
+5. Submit a pull request

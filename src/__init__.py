@@ -1,3 +1,5 @@
-from .nodes import PromptCompanion
+# Import the node classes and register API endpoints
+from nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 
-NODE_CLASS_MAPPINGS = {"Prompt Companion": PromptCompanion}
+# Export the mappings for ComfyUI to find
+__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

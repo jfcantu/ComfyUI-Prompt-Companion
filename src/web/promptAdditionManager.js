@@ -551,33 +551,70 @@ class PromptAdditionManager extends ComfyDialog {
                 return;
             }
         } else {
-            if (!confirm(`Are you sure you want to delete "${this.selectedAdditionName}"?`)) {
+            const confirmed = await this.comfyConfirm(
+                "Confirm Delete",
+                `Are you sure you want to delete "${this.selectedAdditionName}"?`,
+                "Delete",
+                "Cancel"
+            );
+            
+            if (!confirmed) {
                 return;
             }
         }
 
         try {
             this.updateStatus("Deleting prompt addition...", "info");
+            const deletedName = this.selectedAdditionName;
             await ApiOperations.deletePromptAddition(this.selectedAdditionName);
             
             // Remove from local collection
-            delete this.promptAdditions[this.selectedAdditionName];
+            delete this.promptAdditions[deletedName];
             
-            // Clear UI
+            // Find an alternative addition to select
+            const remainingAdditions = Object.keys(this.promptAdditions);
+            let nextSelection = null;
+            
+            if (remainingAdditions.length > 0) {
+                // Try to find the node's original selection if different from deleted one
+                if (this.currentAdditionName && 
+                    this.currentAdditionName !== deletedName && 
+                    this.promptAdditions[this.currentAdditionName]) {
+                    nextSelection = this.currentAdditionName;
+                } else {
+                    // Otherwise, just select the first available addition
+                    nextSelection = remainingAdditions[0];
+                }
+            }
+            
+            // Clear current UI state
             this.positiveTextarea.value = "";
             this.negativeTextarea.value = "";
             this.selectedAdditionName = null;
             this.originalAdditionData = {};
             
-            // Disable buttons that require a selection
-            this.deleteButton.disabled = true;
-            this.revertPositiveButton.disabled = true;
-            this.revertNegativeButton.disabled = true;
-            this.okButton.disabled = true;
-            // Save and Save As buttons remain enabled (they can create new additions)
-            
-            // Refresh the list
+            // Refresh the list first
             this.populateAdditionsList();
+            
+            if (nextSelection) {
+                // Select the next available addition
+                this.selectAddition(nextSelection);
+                
+                // Update the node's widget if we have a node reference
+                if (this.node && this.node.promptAdditionNameWidget) {
+                    this.node.promptAdditionNameWidget.value = nextSelection;
+                    if (this.node.promptAdditionNameWidget.callback) {
+                        this.node.promptAdditionNameWidget.callback();
+                    }
+                }
+            } else {
+                // No additions left - disable buttons that require a selection
+                this.deleteButton.disabled = true;
+                this.revertPositiveButton.disabled = true;
+                this.revertNegativeButton.disabled = true;
+                this.renameButton.disabled = true;
+                this.okButton.disabled = false; // OK can still close dialog
+            }
             
             this.updateStatus("Prompt addition deleted successfully", "success");
         } catch (error) {
@@ -794,9 +831,46 @@ class PromptAdditionManager extends ComfyDialog {
     }
 
     async saveAndClose() {
-        // If an addition is selected, save it first
-        if (this.selectedAdditionName) {
-            await this.saveCurrentAddition();
+        // Check if we're in group edit mode
+        if (this.selectedGroupId !== null) {
+            // In group mode - save any group changes
+            try {
+                await this.saveCurrentGroup();
+            } catch (error) {
+                console.error("Error saving group:", error);
+                // Don't prevent closing if save fails
+            }
+        } else if (this.selectedAdditionName) {
+            // If an addition is selected, save it first
+            try {
+                await this.saveCurrentAddition();
+            } catch (error) {
+                console.error("Error saving addition:", error);
+                // Don't prevent closing if save fails
+            }
+        } else {
+            // No addition selected - check if user has unsaved changes
+            const positiveText = this.positiveTextarea.value.trim();
+            const negativeText = this.negativeTextarea.value.trim();
+            
+            if (positiveText || negativeText) {
+                // User has unsaved text, offer to save
+                const shouldSave = await this.comfyConfirm(
+                    "Unsaved Changes", 
+                    "You have unsaved text in the prompt fields. Would you like to save it as a new prompt addition before closing?",
+                    "Save", 
+                    "Discard"
+                );
+                
+                if (shouldSave) {
+                    try {
+                        await this.saveCurrentAddition();
+                    } catch (error) {
+                        console.error("Error saving addition:", error);
+                        // Continue with closing even if save fails
+                    }
+                }
+            }
         }
         
         // Close the dialog
@@ -807,6 +881,312 @@ class PromptAdditionManager extends ComfyDialog {
         this.statusDiv.textContent = message;
         this.statusDiv.style.color = type === "error" ? "#ff4444" : 
                                     type === "success" ? "#44aa44" : "#666";
+    }
+
+    /**
+     * ComfyUI-style confirmation dialog
+     */
+    comfyConfirm(title, message, confirmText = "Confirm", cancelText = "Cancel") {
+        return new Promise((resolve) => {
+            // Create overlay
+            const modalOverlay = document.createElement('div');
+            modalOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1101;
+            `;
+
+            // Create dialog
+            const modalDialog = document.createElement('div');
+            modalDialog.style.cssText = `
+                background-color: #333;
+                padding: 20px;
+                border-radius: 4px;
+                max-width: 400px;
+                width: 80%;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+                color: #fff;
+            `;
+
+            // Title
+            const modalTitle = document.createElement('h3');
+            modalTitle.textContent = title;
+            modalTitle.style.cssText = `
+                margin: 0 0 15px 0;
+                color: #fff;
+                font-size: 16px;
+            `;
+
+            // Message
+            const modalMessage = document.createElement('p');
+            modalMessage.textContent = message;
+            modalMessage.style.cssText = `
+                margin: 0 0 20px 0;
+                word-break: break-word;
+                line-height: 1.4;
+            `;
+
+            // Button container
+            const modalButtons = document.createElement('div');
+            modalButtons.style.cssText = `
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            `;
+
+            // Cancel button
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = cancelText;
+            cancelButton.style.cssText = `
+                padding: 8px 16px;
+                border: 1px solid #6c757d;
+                border-radius: 4px;
+                background-color: #6c757d;
+                color: white;
+                cursor: pointer;
+            `;
+            cancelButton.onclick = () => {
+                document.body.removeChild(modalOverlay);
+                resolve(false);
+            };
+
+            // Confirm button
+            const confirmButton = document.createElement('button');
+            confirmButton.textContent = confirmText;
+            confirmButton.style.cssText = `
+                padding: 8px 16px;
+                border: 1px solid #28a745;
+                border-radius: 4px;
+                background-color: #28a745;
+                color: white;
+                cursor: pointer;
+            `;
+            confirmButton.onclick = () => {
+                document.body.removeChild(modalOverlay);
+                resolve(true);
+            };
+
+            // Close on overlay click
+            modalOverlay.onclick = (e) => {
+                if (e.target === modalOverlay) {
+                    document.body.removeChild(modalOverlay);
+                    resolve(false);
+                }
+            };
+
+            // Escape key handler
+            const keyHandler = (e) => {
+                if (e.key === 'Escape') {
+                    document.body.removeChild(modalOverlay);
+                    document.removeEventListener('keydown', keyHandler);
+                    resolve(false);
+                }
+            };
+            document.addEventListener('keydown', keyHandler);
+
+            // Assemble dialog
+            modalButtons.appendChild(cancelButton);
+            modalButtons.appendChild(confirmButton);
+            modalDialog.appendChild(modalTitle);
+            modalDialog.appendChild(modalMessage);
+            modalDialog.appendChild(modalButtons);
+            modalOverlay.appendChild(modalDialog);
+            document.body.appendChild(modalOverlay);
+
+            // Focus confirm button
+            confirmButton.focus();
+        });
+    }
+
+    /**
+     * ComfyUI-style prompt dialog
+     */
+    comfyPrompt(title, message, defaultValue = "") {
+        return new Promise((resolve) => {
+            // Create overlay
+            const modalOverlay = document.createElement('div');
+            modalOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1101;
+            `;
+
+            // Create dialog
+            const modalDialog = document.createElement('div');
+            modalDialog.style.cssText = `
+                background-color: #333;
+                padding: 20px;
+                border-radius: 4px;
+                max-width: 400px;
+                width: 80%;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+                color: #fff;
+            `;
+
+            // Title
+            const modalTitle = document.createElement('h3');
+            modalTitle.textContent = title;
+            modalTitle.style.cssText = `
+                margin: 0 0 15px 0;
+                color: #fff;
+                font-size: 16px;
+            `;
+
+            // Message
+            const modalMessage = document.createElement('p');
+            modalMessage.textContent = message;
+            modalMessage.style.cssText = `
+                margin: 0 0 15px 0;
+                word-break: break-word;
+                line-height: 1.4;
+            `;
+
+            // Input field
+            const inputField = document.createElement('input');
+            inputField.type = 'text';
+            inputField.value = defaultValue;
+            inputField.style.cssText = `
+                width: 100%;
+                padding: 8px;
+                margin-bottom: 20px;
+                border: 1px solid #555;
+                border-radius: 4px;
+                background-color: #444;
+                color: #fff;
+                box-sizing: border-box;
+            `;
+
+            // Button container
+            const modalButtons = document.createElement('div');
+            modalButtons.style.cssText = `
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            `;
+
+            // Cancel button
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.style.cssText = `
+                padding: 8px 16px;
+                border: 1px solid #6c757d;
+                border-radius: 4px;
+                background-color: #6c757d;
+                color: white;
+                cursor: pointer;
+            `;
+            cancelButton.onclick = () => {
+                document.body.removeChild(modalOverlay);
+                resolve(null);
+            };
+
+            // OK button
+            const okButton = document.createElement('button');
+            okButton.textContent = 'OK';
+            okButton.style.cssText = `
+                padding: 8px 16px;
+                border: 1px solid #28a745;
+                border-radius: 4px;
+                background-color: #28a745;
+                color: white;
+                cursor: pointer;
+            `;
+            okButton.onclick = () => {
+                const value = inputField.value.trim();
+                document.body.removeChild(modalOverlay);
+                resolve(value || null);
+            };
+
+            // Enter key handler
+            inputField.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    okButton.click();
+                }
+            };
+
+            // Close on overlay click
+            modalOverlay.onclick = (e) => {
+                if (e.target === modalOverlay) {
+                    document.body.removeChild(modalOverlay);
+                    resolve(null);
+                }
+            };
+
+            // Escape key handler
+            const keyHandler = (e) => {
+                if (e.key === 'Escape') {
+                    document.body.removeChild(modalOverlay);
+                    document.removeEventListener('keydown', keyHandler);
+                    resolve(null);
+                }
+            };
+            document.addEventListener('keydown', keyHandler);
+
+            // Assemble dialog
+            modalButtons.appendChild(cancelButton);
+            modalButtons.appendChild(okButton);
+            modalDialog.appendChild(modalTitle);
+            modalDialog.appendChild(modalMessage);
+            modalDialog.appendChild(inputField);
+            modalDialog.appendChild(modalButtons);
+            modalOverlay.appendChild(modalDialog);
+            document.body.appendChild(modalOverlay);
+
+            // Focus and select input
+            inputField.focus();
+            inputField.select();
+        });
+    }
+
+    /**
+     * ComfyUI-style notification
+     */
+    comfyNotify(message, type = "info", duration = 3000) {
+        const notification = document.createElement('div');
+        const bgColor = type === "error" ? "#dc3545" : 
+                       type === "success" ? "#28a745" : 
+                       type === "warning" ? "#ffc107" : "#17a2b8";
+        
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: ${bgColor};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1102;
+            max-width: 300px;
+            word-break: break-word;
+            font-size: 14px;
+        `;
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Auto-remove after duration
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
+        }, duration);
+        
+        return notification;
     }
 
     populateAdditionsList() {
@@ -1046,15 +1426,16 @@ class PromptAdditionManager extends ComfyDialog {
         }
     }
     
-    async promptForName(title, message) {
-        console.log("promptForName called with:", title, message);
+    async promptForName(title, message, defaultValue = "") {
+        console.log("promptForName called with:", title, message, defaultValue);
         
         return new Promise((resolve) => {
             if (app.extensionManager && app.extensionManager.dialog && app.extensionManager.dialog.prompt) {
                 console.log("Using ComfyUI dialog system");
                 app.extensionManager.dialog.prompt({
                     title: title,
-                    message: message
+                    message: message,
+                    default: defaultValue
                 }).then(result => {
                     console.log("Dialog result:", result);
                     resolve(result ? result.trim() : null);
@@ -1063,11 +1444,15 @@ class PromptAdditionManager extends ComfyDialog {
                     resolve(null);
                 });
             } else {
-                // Fallback to browser prompt
-                console.log("Using browser prompt fallback");
-                const result = prompt(message);
-                console.log("Browser prompt result:", result);
-                resolve(result ? result.trim() : null);
+                // Fallback to ComfyUI-style prompt
+                console.log("Using ComfyUI prompt fallback");
+                this.comfyPrompt(title, message, defaultValue).then(result => {
+                    console.log("ComfyUI prompt result:", result);
+                    resolve(result);
+                }).catch((error) => {
+                    console.log("ComfyUI prompt error:", error);
+                    resolve(null);
+                });
             }
         });
     }
@@ -1175,7 +1560,8 @@ class PromptAdditionManager extends ComfyDialog {
             this.deleteButton.disabled = true;
             this.revertPositiveButton.disabled = true;
             this.revertNegativeButton.disabled = true;
-            this.okButton.disabled = true;
+            // Keep OK button enabled in group mode so user can close dialog
+            this.okButton.disabled = false;
         }
         
         // Refresh the additions list (now shows group selections)
@@ -1281,7 +1667,14 @@ class PromptAdditionManager extends ComfyDialog {
                 return;
             }
         } else {
-            if (!confirm(`Are you sure you want to delete group "${group.name}"?`)) {
+            const confirmed = await this.comfyConfirm(
+                "Confirm Delete",
+                `Are you sure you want to delete group "${group.name}"?`,
+                "Delete",
+                "Cancel"
+            );
+            
+            if (!confirmed) {
                 return;
             }
         }
@@ -1610,6 +2003,59 @@ class PromptAdditionManager extends ComfyDialog {
     getNextGroupId() {
         const maxId = this.promptGroups.reduce((max, group) => Math.max(max, group.id || 0), 0);
         return maxId + 1;
+    }
+
+    async quickSave(config) {
+        try {
+            // Check if addition with this name already exists
+            const existingAddition = this.promptAdditions[config.name];
+            
+            let confirmOverwrite = true;
+            if (existingAddition) {
+                confirmOverwrite = await this.comfyConfirm(
+                    "Overwrite Existing",
+                    `A prompt addition named "${config.name}" already exists. Do you want to overwrite it?`,
+                    "Overwrite",
+                    "Cancel"
+                );
+            }
+            
+            if (!confirmOverwrite) return;
+            
+            // Create the prompt addition data
+            const promptAdditionData = {
+                name: config.name,
+                trigger_words: config.trigger_words || "",
+                positive_prompt_addition_text: config.positive_prompt_addition_text || "",
+                negative_prompt_addition_text: config.negative_prompt_addition_text || "",
+                id: existingAddition ? existingAddition.id : undefined
+            };
+            
+            // Save via API
+            const response = await ApiOperations.writePromptAddition(promptAdditionData);
+            
+            if (response && response.success) {
+                // Update local data
+                this.promptAdditions[config.name] = promptAdditionData;
+                
+                // Update the node's prompt data if it exists
+                if (this.node) {
+                    this.node.updatePromptData(this.node, response.data);
+                }
+                
+                // Show success message
+                console.log(`Prompt addition "${config.name}" saved successfully`);
+                this.comfyNotify(`Prompt addition "${config.name}" saved successfully!`, "success");
+                
+            } else {
+                const errorMessage = response?.message || "Failed to save prompt addition - no response from server";
+                throw new Error(errorMessage);
+            }
+            
+        } catch (error) {
+            console.error("Error in quickSave:", error);
+            this.comfyNotify("Error saving prompt addition: " + error.message, "error");
+        }
     }
 
     show() {

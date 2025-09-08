@@ -8,8 +8,10 @@ import jsonschema
 
 comfy_path = os.path.dirname(folder_paths.__file__)
 extension_path = os.path.join(os.path.dirname(__file__))
+user_directory = folder_paths.get_user_directory()
 
-CONFIG_PATH = os.path.join(extension_path, "prompt-companion-config.json")
+# Store config in user directory instead of extension directory
+CONFIG_PATH = os.path.join(user_directory, "prompt-companion-config.json")
 schema_path = os.path.join(extension_path, "config-schema.json")
 
 
@@ -66,7 +68,7 @@ class PromptGroup:
     additions: list[dict[str, int]]
 
     def __init__(
-        self, name: str, trigger_words: list[str] = None, additions: list[dict[str, int]] = None, id: int | None = None
+        self, name: str, trigger_words: list[str] | None = None, additions: list[dict[str, int]] | None = None, id: int | None = None
     ):
         self.id = id
         self.name = name
@@ -95,7 +97,7 @@ class ExtensionConfig:
                     jsonschema.validate(config_data, json.load(schema_file))
                 except jsonschema.ValidationError as e:
                     logging.error(
-                        "Config file failed to validated against expected schema!"
+                        "Config file failed to validate against expected schema!"
                     )
 
         self._prompt_additions = {}
@@ -258,8 +260,12 @@ class ExtensionConfig:
 
 config_data = []
 
+# Load config from user directory only
 if os.path.exists(CONFIG_PATH):
     with open(CONFIG_PATH, "r") as config_file:
         config_data = json.load(config_file)
+        print(f"[ComfyUI-Prompt-Companion] Loaded config from: {CONFIG_PATH}")
+else:
+    print(f"[ComfyUI-Prompt-Companion] No existing config found, will create new config at: {CONFIG_PATH}")
 
 PROMPT_ADDITIONS = ExtensionConfig(config_data)
