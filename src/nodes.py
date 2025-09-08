@@ -4,7 +4,7 @@ ComfyUI Prompt Companion - API Routes Registration
 This module registers all HTTP API endpoints for managing prompt additions and groups.
 The actual handler implementations are in separate modules for better organization.
 
-Author: jfcantu
+Author: jfcantu@github
 Version: 0.0.2
 """
 
