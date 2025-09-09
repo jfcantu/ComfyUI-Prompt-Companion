@@ -773,9 +773,9 @@ class PromptCompanionAutoselectGroups:
     """
     
     # ComfyUI node metadata
-    RETURN_TYPES = ("PROMPT_ADDITION",)
-    RETURN_NAMES = ("prompt_addition",)
-    OUTPUT_TOOLTIPS = ("Prompt addition data that can be connected to other nodes",)
+    RETURN_TYPES = (folder_paths.get_filename_list("checkpoints") if folder_paths else ["test_model.safetensors"], "PROMPT_ADDITION")
+    RETURN_NAMES = ("ckpt_name", "prompt_addition")
+    OUTPUT_TOOLTIPS = ("Validated checkpoint name", "Prompt addition data that can be connected to other nodes")
     FUNCTION = "autoselect_groups"
     CATEGORY = "jfc"
 
@@ -813,7 +813,7 @@ class PromptCompanionAutoselectGroups:
         combine_mode: str,
         ckpt_name: str,
         prompt_addition: Optional[PromptAdditionInput] = None,
-    ) -> Tuple['PromptAdditionInput']:
+    ) -> Tuple[str, 'PromptAdditionInput']:
         """Auto-select prompt groups based on checkpoint trigger words."""
         
         # Find matching groups based on trigger words
@@ -875,7 +875,38 @@ class PromptCompanionAutoselectGroups:
             elif input_negative:
                 final_negative = input_negative
         
-        return (PromptAdditionInput(final_positive, final_negative),)
+        # Validate and ensure ckpt_name is compatible with Load Checkpoint
+        validated_ckpt_name = self._validate_checkpoint_name(ckpt_name)
+        
+        return (validated_ckpt_name, PromptAdditionInput(final_positive, final_negative))
+
+    def _validate_checkpoint_name(self, ckpt_name: str) -> str:
+        """
+        Validate that the checkpoint name is in the available checkpoints list.
+        This ensures compatibility with Load Checkpoint nodes.
+        
+        Args:
+            ckpt_name: The checkpoint name to validate
+            
+        Returns:
+            The validated checkpoint name, or the first available if invalid
+        """
+        if not folder_paths:
+            # Fallback for testing environments
+            return ckpt_name or "test_model.safetensors"
+            
+        available_checkpoints = folder_paths.get_filename_list("checkpoints")
+        
+        if not available_checkpoints:
+            # No checkpoints available, return as-is
+            return ckpt_name
+            
+        if ckpt_name in available_checkpoints:
+            # Valid checkpoint name
+            return ckpt_name
+        else:
+            # Invalid checkpoint name, return the first available one
+            return available_checkpoints[0]
 
     def _group_matches_checkpoint(self, group, ckpt_name: str) -> bool:
         """Check if a group's trigger words match the checkpoint name."""

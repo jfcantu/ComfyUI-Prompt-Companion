@@ -98,13 +98,47 @@ app.registerExtension({
                 // Update prompt addition names
                 if (node.promptAdditionNameWidget) {
                     const additionNames = Object.keys(this.promptAdditions);
+                    const currentValue = node.promptAdditionNameWidget.value;
                     node.promptAdditionNameWidget.options.values = additionNames.length > 0 ? additionNames : [""];
+                    
+                    // Trigger a redraw of the widget dropdown
+                    if (node.promptAdditionNameWidget.inputEl) {
+                        // Clear existing options
+                        node.promptAdditionNameWidget.inputEl.innerHTML = "";
+                        // Rebuild options
+                        node.promptAdditionNameWidget.options.values.forEach(value => {
+                            const option = document.createElement("option");
+                            option.value = value;
+                            option.textContent = value;
+                            if (value === currentValue) {
+                                option.selected = true;
+                            }
+                            node.promptAdditionNameWidget.inputEl.appendChild(option);
+                        });
+                    }
                 }
                 
                 // Update prompt group names
                 if (node.promptAdditionGroupWidget) {
                     const groupNames = this.promptGroups.map(g => g.name);
+                    const currentValue = node.promptAdditionGroupWidget.value;
                     node.promptAdditionGroupWidget.options.values = groupNames.length > 0 ? groupNames : [""];
+                    
+                    // Trigger a redraw of the widget dropdown
+                    if (node.promptAdditionGroupWidget.inputEl) {
+                        // Clear existing options
+                        node.promptAdditionGroupWidget.inputEl.innerHTML = "";
+                        // Rebuild options
+                        node.promptAdditionGroupWidget.options.values.forEach(value => {
+                            const option = document.createElement("option");
+                            option.value = value;
+                            option.textContent = value;
+                            if (value === currentValue) {
+                                option.selected = true;
+                            }
+                            node.promptAdditionGroupWidget.inputEl.appendChild(option);
+                        });
+                    }
                 }
                 
                 // Handle widget visibility based on addition_type
@@ -540,6 +574,57 @@ app.registerExtension({
             node.promptAdditions = {};
             node.promptAdditionNames = {};
             node.promptGroups = [];
+            
+            // Add refreshWidgetOptions method to all nodes that might have dropdown widgets
+            if (!node.refreshWidgetOptions) {
+                node.refreshWidgetOptions = function (node) {
+                    // Update prompt addition names (for nodes with prompt_addition_name dropdown)
+                    if (node.promptAdditionNameWidget) {
+                        const additionNames = Object.keys(this.promptAdditions);
+                        const currentValue = node.promptAdditionNameWidget.value;
+                        node.promptAdditionNameWidget.options.values = additionNames.length > 0 ? additionNames : [""];
+                        
+                        // Trigger a redraw of the widget dropdown
+                        if (node.promptAdditionNameWidget.inputEl) {
+                            // Clear existing options
+                            node.promptAdditionNameWidget.inputEl.innerHTML = "";
+                            // Rebuild options
+                            node.promptAdditionNameWidget.options.values.forEach(value => {
+                                const option = document.createElement("option");
+                                option.value = value;
+                                option.textContent = value;
+                                if (value === currentValue) {
+                                    option.selected = true;
+                                }
+                                node.promptAdditionNameWidget.inputEl.appendChild(option);
+                            });
+                        }
+                    }
+                    
+                    // Update prompt group names (for nodes with prompt_addition_group dropdown)
+                    if (node.promptAdditionGroupWidget) {
+                        const groupNames = this.promptGroups.map(g => g.name);
+                        const currentValue = node.promptAdditionGroupWidget.value;
+                        node.promptAdditionGroupWidget.options.values = groupNames.length > 0 ? groupNames : [""];
+                        
+                        // Trigger a redraw of the widget dropdown
+                        if (node.promptAdditionGroupWidget.inputEl) {
+                            // Clear existing options
+                            node.promptAdditionGroupWidget.inputEl.innerHTML = "";
+                            // Rebuild options
+                            node.promptAdditionGroupWidget.options.values.forEach(value => {
+                                const option = document.createElement("option");
+                                option.value = value;
+                                option.textContent = value;
+                                if (value === currentValue) {
+                                    option.selected = true;
+                                }
+                                node.promptAdditionGroupWidget.inputEl.appendChild(option);
+                            });
+                        }
+                    }
+                };
+            }
 
             // Load prompt data
             const promptAdditions = await ApiOperations.getPromptAdditions();
@@ -579,6 +664,11 @@ app.registerExtension({
                     node.promptAdditions = newPromptAdditionsObject;
                     node.promptAdditionNames = Object.keys(newPromptAdditionsObject);
                     node.promptGroups = event.detail.prompt_groups || [];
+                    
+                    // Refresh dropdown widgets for nodes without updatePromptData method
+                    if (node.refreshWidgetOptions) {
+                        node.refreshWidgetOptions(node);
+                    }
                 }
             };
             
@@ -586,6 +676,15 @@ app.registerExtension({
             
             // Store the event listener for cleanup
             node.eventListener = eventListener;
+            
+            // Set up widget references for nodes that have dropdown widgets
+            if (node.comfyClass === "PromptCompanionSingleAddition" || node.comfyClass === "PromptCompanion") {
+                node.promptAdditionNameWidget = node.widgets?.find((w) => w.name === "prompt_addition_name");
+            }
+            
+            if (node.comfyClass === "PromptCompanionPromptGroup" || node.comfyClass === "PromptCompanion") {
+                node.promptAdditionGroupWidget = node.widgets?.find((w) => w.name === "prompt_addition_group");
+            }
         }
 
         if (node.comfyClass == "PromptCompanion") {
