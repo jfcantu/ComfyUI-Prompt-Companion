@@ -15,10 +15,10 @@ A ComfyUI extension for managing and organizing prompt additions with support fo
 
 This will be available once I'm happy enough with this node to publish it to the repository.
 
-1. ~~Install [ComfyUI](https://docs.comfy.org/get_started)~~
-2. ~~Install [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager)~~
-3. ~~Look up "ComfyUI Prompt Companion" in ComfyUI-Manager and install~~
-4. ~~Restart ComfyUI~~
+1. Install [ComfyUI](https://docs.comfy.org/get_started)
+2. Install [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager)
+3. Look up "ComfyUI Prompt Companion" in ComfyUI-Manager and install
+4. Restart ComfyUI
 
 ### Manual Install
 1. Clone this repository to your ComfyUI custom nodes directory:
