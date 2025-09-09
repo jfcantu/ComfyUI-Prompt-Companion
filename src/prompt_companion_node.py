@@ -116,10 +116,16 @@ class PromptCompanion:
     - Group (Automatic): Apply groups based on trigger word matching
     """
     
-    # ComfyUI node metadata
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING", "PROMPT_ADDITION")
+    # ComfyUI node metadata - use same type as checkpoint input for compatibility
+    RETURN_TYPES = (folder_paths.get_filename_list("checkpoints") if folder_paths else ["test_model.safetensors"], "STRING", "STRING", "STRING", "STRING", "PROMPT_ADDITION")
     RETURN_NAMES = ("ckpt_name", "positive_combined_prompt", "negative_combined_prompt", 
                    "positive_addition", "negative_addition", "prompt_addition")
+    OUTPUT_TOOLTIPS = ("Checkpoint filename compatible with Load Checkpoint nodes",
+                       "Combined positive prompt with additions applied", 
+                       "Combined negative prompt with additions applied",
+                       "The positive prompt addition text that was applied",
+                       "The negative prompt addition text that was applied",
+                       "Prompt addition data that can be connected to other nodes")
     FUNCTION = "combine_prompts"
     OUTPUT_NODE = True
     CATEGORY = "jfc"
@@ -265,9 +271,12 @@ class PromptCompanion:
         Returns:
             Tuple of (ckpt_name, positive_combined, negative_combined, positive_addition, negative_addition, prompt_addition)
         """
+        # Validate and ensure ckpt_name is compatible with Load Checkpoint
+        validated_ckpt_name = self._validate_checkpoint_name(ckpt_name)
+        
         # Always return ckpt_name first
         if not enable_addition:
-            return (ckpt_name, positive_prompt, negative_prompt, "", "", PromptAdditionInput("", ""))
+            return (validated_ckpt_name, positive_prompt, negative_prompt, "", "", PromptAdditionInput("", ""))
 
         # Calculate addition values based on type
         calculated_positive_addition = ""
@@ -310,7 +319,7 @@ class PromptCompanion:
         )
         
         return (
-            ckpt_name,
+            validated_ckpt_name,
             final_positive_combined,
             final_negative_combined,
             calculated_positive_addition,
@@ -481,6 +490,35 @@ class PromptCompanion:
                 final_negative = f"{negative_prompt}, {negative_addition}" if negative_prompt else negative_addition
         
         return final_positive, final_negative
+
+    def _validate_checkpoint_name(self, ckpt_name: str) -> str:
+        """
+        Validate that the checkpoint name is in the available checkpoints list.
+        This ensures compatibility with Load Checkpoint nodes.
+        
+        Args:
+            ckpt_name: The checkpoint name to validate
+            
+        Returns:
+            The validated checkpoint name, or the first available if invalid
+        """
+        if not folder_paths:
+            # Fallback for testing environments
+            return ckpt_name or "test_model.safetensors"
+            
+        available_checkpoints = folder_paths.get_filename_list("checkpoints")
+        
+        if not available_checkpoints:
+            # No checkpoints available, return as-is
+            return ckpt_name
+            
+        if ckpt_name in available_checkpoints:
+            # Valid checkpoint name
+            return ckpt_name
+        else:
+            # Invalid checkpoint name, return the first available one
+            print(f"[ComfyUI-Prompt-Companion] Warning: '{ckpt_name}' not found in available checkpoints. Using '{available_checkpoints[0]}' instead.")
+            return available_checkpoints[0]
 
 
 # Node registration mapping
