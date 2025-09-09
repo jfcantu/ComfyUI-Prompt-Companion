@@ -55,11 +55,13 @@ class PromptAdditionInput:
             }
         }
     
-    RETURN_TYPES = ("PROMPT_ADDITION",)
+    RETURN_TYPES = ("PROMPT_ADDITION", "STRING", "STRING")
+    RETURN_NAMES = ("prompt_addition", "positive_prompt", "negative_prompt")
+    OUTPUT_TOOLTIPS = ("Prompt addition data that can be connected to other nodes", "Positive prompt text", "Negative prompt text")
     FUNCTION = "create_prompt_addition"
     CATEGORY = "jfc"
     
-    def create_prompt_addition(self, combine_mode: str, positive_prompt_addition: str, negative_prompt_addition: str, prompt_addition: Optional['PromptAdditionInput'] = None) -> Tuple['PromptAdditionInput']:
+    def create_prompt_addition(self, combine_mode: str, positive_prompt_addition: str, negative_prompt_addition: str, prompt_addition: Optional['PromptAdditionInput'] = None) -> Tuple['PromptAdditionInput', str, str]:
         # Get the input values
         input_positive = ""
         input_negative = ""
@@ -103,7 +105,7 @@ class PromptAdditionInput:
             elif input_negative:
                 final_negative = input_negative
         
-        return (PromptAdditionInput(final_positive, final_negative),)
+        return (PromptAdditionInput(final_positive, final_negative), final_positive, final_negative)
 
 
 class PromptCompanion:
@@ -528,9 +530,9 @@ class PromptCompanionSingleAddition:
     """
     
     # ComfyUI node metadata
-    RETURN_TYPES = ("PROMPT_ADDITION",)
-    RETURN_NAMES = ("prompt_addition",)
-    OUTPUT_TOOLTIPS = ("Prompt addition data that can be connected to other nodes",)
+    RETURN_TYPES = ("PROMPT_ADDITION", "STRING", "STRING")
+    RETURN_NAMES = ("prompt_addition", "positive_prompt", "negative_prompt")
+    OUTPUT_TOOLTIPS = ("Prompt addition data that can be connected to other nodes", "Positive prompt text", "Negative prompt text")
     FUNCTION = "apply_single_addition"
     CATEGORY = "jfc"
 
@@ -570,7 +572,7 @@ class PromptCompanionSingleAddition:
         combine_mode: str,
         prompt_addition_name: str,
         prompt_addition: Optional[PromptAdditionInput] = None,
-    ) -> Tuple['PromptAdditionInput']:
+    ) -> Tuple['PromptAdditionInput', str, str]:
         """Apply the selected prompt addition with optional input combination."""
         
         # Get the selected addition
@@ -627,7 +629,7 @@ class PromptCompanionSingleAddition:
             elif input_negative:
                 final_negative = input_negative
         
-        return (PromptAdditionInput(final_positive, final_negative),)
+        return (PromptAdditionInput(final_positive, final_negative), final_positive, final_negative)
 
 
 class PromptCompanionPromptGroup:
@@ -638,9 +640,9 @@ class PromptCompanionPromptGroup:
     """
     
     # ComfyUI node metadata
-    RETURN_TYPES = ("PROMPT_ADDITION",)
-    RETURN_NAMES = ("prompt_addition",)
-    OUTPUT_TOOLTIPS = ("Prompt addition data that can be connected to other nodes",)
+    RETURN_TYPES = ("PROMPT_ADDITION", "STRING", "STRING")
+    RETURN_NAMES = ("prompt_addition", "positive_prompt", "negative_prompt")
+    OUTPUT_TOOLTIPS = ("Prompt addition data that can be connected to other nodes", "Positive prompt text", "Negative prompt text")
     FUNCTION = "apply_prompt_group"
     CATEGORY = "jfc"
 
@@ -680,7 +682,7 @@ class PromptCompanionPromptGroup:
         combine_mode: str,
         prompt_addition_group: str,
         prompt_addition: Optional[PromptAdditionInput] = None,
-    ) -> Tuple['PromptAdditionInput']:
+    ) -> Tuple['PromptAdditionInput', str, str]:
         """Apply the selected prompt group with optional input combination."""
         
         # Get the group additions
@@ -742,7 +744,7 @@ class PromptCompanionPromptGroup:
             elif input_negative:
                 final_negative = input_negative
         
-        return (PromptAdditionInput(final_positive, final_negative),)
+        return (PromptAdditionInput(final_positive, final_negative), final_positive, final_negative)
 
     def _collect_group_additions(self, groups) -> Tuple[List[str], List[str]]:
         """Collect all prompt additions from the given groups."""
@@ -948,9 +950,9 @@ class PromptCompanionStringsToAddition:
     """
     
     # ComfyUI node metadata
-    RETURN_TYPES = ("PROMPT_ADDITION",)
-    RETURN_NAMES = ("prompt_addition",)
-    OUTPUT_TOOLTIPS = ("Prompt addition created from the input strings",)
+    RETURN_TYPES = ("PROMPT_ADDITION", "STRING", "STRING")
+    RETURN_NAMES = ("prompt_addition", "positive_prompt", "negative_prompt")
+    OUTPUT_TOOLTIPS = ("Prompt addition created from the input strings", "Positive prompt text", "Negative prompt text")
     FUNCTION = "strings_to_addition"
     CATEGORY = "jfc"
 
@@ -982,9 +984,9 @@ class PromptCompanionStringsToAddition:
         self,
         positive_prompt: str,
         negative_prompt: str,
-    ) -> Tuple['PromptAdditionInput']:
+    ) -> Tuple['PromptAdditionInput', str, str]:
         """Convert positive and negative strings to a prompt addition."""
-        return (PromptAdditionInput(positive_prompt, negative_prompt),)
+        return (PromptAdditionInput(positive_prompt, negative_prompt), positive_prompt, negative_prompt)
 
 
 class PromptCompanionAdditionToStrings:
