@@ -16,6 +16,50 @@ from src.prompt_companion_node import PromptCompanion
 from src.extension_config import PromptAddition, PromptGroup
 
 
+# Module-level fixtures that can be used by all test classes
+@pytest.fixture
+def mock_prompt_additions():
+    """Mock PROMPT_ADDITIONS with test data."""
+    with patch('src.prompt_companion_node.PROMPT_ADDITIONS') as mock:
+        # Create mock prompt additions
+        mock_addition1 = Mock()
+        mock_addition1.id = 1
+        mock_addition1.name = "Test Addition 1"
+        mock_addition1.positive_prompt_addition_text = "positive1"
+        mock_addition1.negative_prompt_addition_text = "negative1"
+        
+        mock_addition2 = Mock()
+        mock_addition2.id = 2
+        mock_addition2.name = "Test Addition 2"
+        mock_addition2.positive_prompt_addition_text = "positive2"
+        mock_addition2.negative_prompt_addition_text = "negative2"
+        
+        mock.prompt_additions = {
+            "Test Addition 1": mock_addition1,
+            "Test Addition 2": mock_addition2
+        }
+        
+        # Create mock prompt groups
+        mock_group1 = Mock()
+        mock_group1.id = 1
+        mock_group1.name = "Test Group 1"
+        mock_group1.trigger_words = ["test", "model1"]
+        mock_group1.additions = [{"addition_id": 1}, {"addition_id": 2}]
+        
+        mock_group2 = Mock()
+        mock_group2.id = 2
+        mock_group2.name = "Test Group 2"
+        mock_group2.trigger_words = ["model2"]
+        mock_group2.additions = [{"addition_id": 1}]
+        
+        mock.prompt_groups = {
+            1: mock_group1,
+            2: mock_group2
+        }
+        
+        yield mock
+
+
 class TestPromptCompanionNode:
     """Test the main PromptCompanion node class."""
     
@@ -79,10 +123,15 @@ class TestNodeMetadata:
     
     def test_node_metadata(self):
         """Test node metadata is correctly defined."""
-        assert PromptCompanion.RETURN_TYPES == ("STRING", "STRING", "STRING", "STRING", "STRING")
+        # RETURN_TYPES includes checkpoint list + strings + PROMPT_ADDITION
+        assert len(PromptCompanion.RETURN_TYPES) == 6
+        assert isinstance(PromptCompanion.RETURN_TYPES[0], list)  # checkpoint list
+        assert PromptCompanion.RETURN_TYPES[1:5] == ("STRING", "STRING", "STRING", "STRING")
+        assert PromptCompanion.RETURN_TYPES[5] == "PROMPT_ADDITION"
+        
         assert PromptCompanion.RETURN_NAMES == (
             "ckpt_name", "positive_combined_prompt", "negative_combined_prompt", 
-            "positive_addition", "negative_addition"
+            "positive_addition", "negative_addition", "prompt_addition"
         )
         assert PromptCompanion.FUNCTION == "combine_prompts"
         assert PromptCompanion.OUTPUT_NODE is True
@@ -154,7 +203,7 @@ class TestPromptCombination:
             negative_prompt="base_neg"
         )
         
-        assert result == ("test_model.safetensors", "base_pos", "base_neg", "", "")
+        assert result[:5] == ("test_model.safetensors", "base_pos", "base_neg", "", "")
     
     def test_individual_mode_with_direct_input(self, mock_prompt_additions):
         """Test Individual mode using direct text input."""
@@ -181,7 +230,7 @@ class TestPromptCombination:
             "custom_positive",
             "custom_negative"
         )
-        assert result == expected
+        assert result[:5] == expected
     
     def test_individual_mode_with_saved_addition(self, mock_prompt_additions):
         """Test Individual mode using saved prompt addition."""
@@ -208,7 +257,7 @@ class TestPromptCombination:
             "positive1",
             "negative1"
         )
-        assert result == expected
+        assert result[:5] == expected
     
     def test_group_mode_manual(self, mock_prompt_additions):
         """Test Group mode with manual selection."""
@@ -235,7 +284,7 @@ class TestPromptCombination:
             "positive1, positive2",
             "negative1, negative2"
         )
-        assert result == expected
+        assert result[:5] == expected
     
     def test_group_mode_automatic_with_trigger_match(self, mock_prompt_additions):
         """Test Group mode with automatic trigger word matching."""
@@ -262,7 +311,7 @@ class TestPromptCombination:
             "positive1, positive2",
             "negative1, negative2"
         )
-        assert result == expected
+        assert result[:5] == expected
     
     def test_group_mode_automatic_no_match(self, mock_prompt_additions):
         """Test Group mode with automatic mode when no triggers match."""
@@ -290,7 +339,7 @@ class TestPromptCombination:
             "",
             ""
         )
-        assert result == expected
+        assert result[:5] == expected
     
     def test_combine_mode_prepend(self, mock_prompt_additions):
         """Test prepend combine mode."""

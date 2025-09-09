@@ -7,9 +7,9 @@ validation, error responses, and data consistency.
 
 import json
 import pytest
-from unittest.mock import Mock, patch, mock_open, MagicMock
+from unittest.mock import Mock, AsyncMock, patch, mock_open, MagicMock
 from aiohttp import web
-from aiohttp.test import AiohttpClient, make_mocked_request
+from aiohttp.test_utils import TestClient, make_mocked_request
 
 import sys
 import os
@@ -180,7 +180,7 @@ class TestPromptAdditionHandlers:
         }
         
         request = Mock()
-        request.json = Mock(return_value=request_data)
+        request.json = AsyncMock(return_value=request_data)
         
         response = await write_prompt_addition(request)
         
@@ -210,7 +210,7 @@ class TestPromptAdditionHandlers:
         request_data = {"positive_prompt_addition_text": "positive text"}
         
         request = Mock()
-        request.json = Mock(return_value=request_data)
+        request.json = AsyncMock(return_value=request_data)
         
         response = await write_prompt_addition(request)
         
@@ -306,7 +306,7 @@ class TestPromptGroupHandlers:
         }
         
         request = Mock()
-        request.json = Mock(return_value=request_data)
+        request.json = AsyncMock(return_value=request_data)
         
         response = await write_prompt_group(request)
         
@@ -327,14 +327,14 @@ class TestPromptGroupHandlers:
         }
         
         request = Mock()
-        request.json = Mock(return_value=request_data)
+        request.json = AsyncMock(return_value=request_data)
         
         response = await write_prompt_group(request)
         
         assert response.status == 400
         body = json.loads(response.body.decode())
         assert body["success"] is False
-        assert "trigger_words must be an array" in body["message"]
+        assert "Invalid trigger_words format" in body["message"]
     
     @pytest.mark.asyncio
     async def test_delete_prompt_group_success(self, mock_prompt_additions, mock_save_definitions):

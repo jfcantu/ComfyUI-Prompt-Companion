@@ -19,7 +19,6 @@ from prompt_companion_node import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPING
 # Register API endpoints only when running in ComfyUI
 try:
     from server import PromptServer
-    print("[ComfyUI-Prompt-Companion] PromptServer imported successfully")
     
     # Import API handlers from separate module
     from api_handlers import (
@@ -30,11 +29,9 @@ try:
         write_prompt_group,
         delete_prompt_group
     )
-    print("[ComfyUI-Prompt-Companion] API handlers imported successfully")
     
     # Get the routes instance for registering API endpoints
     routes = PromptServer.instance.routes
-    print(f"[ComfyUI-Prompt-Companion] Got routes instance: {routes}")
     
     # Register API endpoints using decorator pattern
     PromptServer.instance.routes.get("/prompt-companion/prompt-addition")(get_prompt_additions)
@@ -44,13 +41,11 @@ try:
     PromptServer.instance.routes.post("/prompt-companion/prompt-group")(write_prompt_group)
     PromptServer.instance.routes.delete("/prompt-companion/prompt-group/{prompt_group_id}")(delete_prompt_group)
     
-    print(f"[ComfyUI-Prompt-Companion] API routes registered successfully - Total routes: {len(routes)}")
     
 except ImportError as e:
     # Running outside ComfyUI - routes won't be registered
-    print(f"[ComfyUI-Prompt-Companion] Running outside ComfyUI - API routes not registered: {e}")
+    pass
 except Exception as e:
-    print(f"[ComfyUI-Prompt-Companion] Error during route registration: {e}")
     import traceback
     traceback.print_exc()
 

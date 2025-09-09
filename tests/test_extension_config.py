@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from src.extension_config import (
     PromptAddition,
     PromptGroup,
-    PromptAdditionManager,
-    get_prompt_companion_config_path
+    ExtensionConfig,
+    CONFIG_PATH
 )
 
 
@@ -32,7 +32,7 @@ class TestPromptAddition:
             trigger_words="test, sample",
             positive_prompt_addition_text="positive text",
             negative_prompt_addition_text="negative text",
-            addition_id=123
+            id=123
         )
         
         assert addition.name == "Test Addition"
@@ -49,17 +49,15 @@ class TestPromptAddition:
         assert addition.trigger_words == ""
         assert addition.positive_prompt_addition_text == ""
         assert addition.negative_prompt_addition_text == ""
-        assert isinstance(addition.id, int)
-        assert addition.id > 0
+        assert addition.id is None
     
-    def test_auto_generated_id(self):
-        """Test that ID is auto-generated when not provided."""
+    def test_id_is_none_by_default(self):
+        """Test that ID is None when not provided."""
         addition1 = PromptAddition("Addition 1")
         addition2 = PromptAddition("Addition 2")
         
-        assert addition1.id != addition2.id
-        assert isinstance(addition1.id, int)
-        assert isinstance(addition2.id, int)
+        assert addition1.id is None
+        assert addition2.id is None
     
     def test_to_dict(self):
         """Test converting PromptAddition to dictionary."""
@@ -68,7 +66,7 @@ class TestPromptAddition:
             trigger_words="test",
             positive_prompt_addition_text="positive",
             negative_prompt_addition_text="negative",
-            addition_id=456
+            id=456
         )
         
         expected = {
@@ -79,37 +77,25 @@ class TestPromptAddition:
             "id": 456
         }
         
-        assert addition.to_dict() == expected
+        assert addition.as_dict() == expected
     
-    def test_from_dict(self):
-        """Test creating PromptAddition from dictionary."""
-        data = {
-            "name": "Dict Addition",
-            "trigger_words": "dict",
-            "positive_prompt_addition_text": "pos",
-            "negative_prompt_addition_text": "neg",
-            "id": 789
-        }
+    def test_as_dict_includes_all_fields(self):
+        """Test that as_dict includes all expected fields."""
+        addition = PromptAddition(
+            name="Complete Addition",
+            trigger_words="word1, word2",
+            positive_prompt_addition_text="positive",
+            negative_prompt_addition_text="negative",
+            id=999
+        )
         
-        addition = PromptAddition.from_dict(data)
+        result = addition.as_dict()
         
-        assert addition.name == "Dict Addition"
-        assert addition.trigger_words == "dict"
-        assert addition.positive_prompt_addition_text == "pos"
-        assert addition.negative_prompt_addition_text == "neg"
-        assert addition.id == 789
-    
-    def test_from_dict_missing_fields(self):
-        """Test creating PromptAddition from dictionary with missing fields."""
-        data = {"name": "Minimal"}
-        
-        addition = PromptAddition.from_dict(data)
-        
-        assert addition.name == "Minimal"
-        assert addition.trigger_words == ""
-        assert addition.positive_prompt_addition_text == ""
-        assert addition.negative_prompt_addition_text == ""
-        assert isinstance(addition.id, int)
+        assert result["name"] == "Complete Addition"
+        assert result["trigger_words"] == "word1, word2"
+        assert result["positive_prompt_addition_text"] == "positive"
+        assert result["negative_prompt_addition_text"] == "negative"
+        assert result["id"] == 999
 
 
 class TestPromptGroup:
@@ -122,7 +108,7 @@ class TestPromptGroup:
             name="Test Group",
             trigger_words=["test", "sample"],
             additions=additions,
-            group_id=123
+            id=123
         )
         
         assert group.name == "Test Group"
@@ -137,17 +123,15 @@ class TestPromptGroup:
         assert group.name == "Simple Group"
         assert group.trigger_words == []
         assert group.additions == []
-        assert isinstance(group.id, int)
-        assert group.id > 0
+        assert group.id is None
     
-    def test_auto_generated_id(self):
-        """Test that ID is auto-generated when not provided."""
+    def test_id_is_none_by_default(self):
+        """Test that ID is None when not provided."""
         group1 = PromptGroup("Group 1")
         group2 = PromptGroup("Group 2")
         
-        assert group1.id != group2.id
-        assert isinstance(group1.id, int)
-        assert isinstance(group2.id, int)
+        assert group1.id is None
+        assert group2.id is None
     
     def test_to_dict(self):
         """Test converting PromptGroup to dictionary."""
@@ -156,7 +140,7 @@ class TestPromptGroup:
             name="Test Group",
             trigger_words=["test", "group"],
             additions=additions,
-            group_id=456
+            id=456
         )
         
         expected = {
@@ -166,44 +150,33 @@ class TestPromptGroup:
             "id": 456
         }
         
-        assert group.to_dict() == expected
+        assert group.as_dict() == expected
     
-    def test_from_dict(self):
-        """Test creating PromptGroup from dictionary."""
+    def test_as_dict_includes_all_fields(self):
+        """Test that as_dict includes all expected fields."""
         additions = [{"addition_id": 3}, {"addition_id": 4}]
-        data = {
-            "name": "Dict Group",
-            "trigger_words": ["dict", "test"],
-            "additions": additions,
-            "id": 789
-        }
+        group = PromptGroup(
+            name="Complete Group",
+            trigger_words=["word1", "word2"],
+            additions=additions,
+            id=777
+        )
         
-        group = PromptGroup.from_dict(data)
+        result = group.as_dict()
         
-        assert group.name == "Dict Group"
-        assert group.trigger_words == ["dict", "test"]
-        assert group.additions == additions
-        assert group.id == 789
-    
-    def test_from_dict_missing_fields(self):
-        """Test creating PromptGroup from dictionary with missing fields."""
-        data = {"name": "Minimal Group"}
-        
-        group = PromptGroup.from_dict(data)
-        
-        assert group.name == "Minimal Group"
-        assert group.trigger_words == []
-        assert group.additions == []
-        assert isinstance(group.id, int)
+        assert result["name"] == "Complete Group"
+        assert result["trigger_words"] == ["word1", "word2"]
+        assert result["additions"] == additions
+        assert result["id"] == 777
 
 
-class TestPromptAdditionManager:
-    """Test PromptAdditionManager class."""
+class TestExtensionConfig:
+    """Test ExtensionConfig class."""
     
     @pytest.fixture
     def manager(self):
-        """Create a PromptAdditionManager instance."""
-        return PromptAdditionManager()
+        """Create an ExtensionConfig instance."""
+        return ExtensionConfig()
     
     @pytest.fixture
     def sample_additions(self):
@@ -317,102 +290,29 @@ class TestPromptAdditionManager:
         
         result = manager.prompt_additions_as_dict()
         
-        assert "additions" in result
-        assert "groups" in result
+        assert "prompt_additions" in result
+        assert "prompt_groups" in result
         
         # Check additions
-        assert len(result["additions"]) == 2
-        assert "Addition 1" in result["additions"]
-        assert "Addition 2" in result["additions"]
+        assert len(result["prompt_additions"]) == 2
+        addition_names = [item["name"] for item in result["prompt_additions"]]
+        assert "Addition 1" in addition_names
+        assert "Addition 2" in addition_names
         
         # Check groups
-        assert len(result["groups"]) == 2
-        assert str(sample_groups[0].id) in result["groups"]
-        assert str(sample_groups[1].id) in result["groups"]
+        assert len(result["prompt_groups"]) == 2
+        group_names = [item["name"] for item in result["prompt_groups"]]
+        assert "Group 1" in group_names
+        assert "Group 2" in group_names
     
-    def test_load_from_dict_valid_data(self, manager):
-        """Test loading manager from valid dictionary data."""
-        data = {
-            "additions": {
-                "Test Addition": {
-                    "name": "Test Addition",
-                    "trigger_words": "test",
-                    "positive_prompt_addition_text": "positive",
-                    "negative_prompt_addition_text": "negative",
-                    "id": 1
-                }
-            },
-            "groups": {
-                "1": {
-                    "name": "Test Group",
-                    "trigger_words": ["test"],
-                    "additions": [{"addition_id": 1}],
-                    "id": 1
-                }
-            }
-        }
-        
-        manager.load_from_dict(data)
-        
-        assert len(manager.prompt_additions) == 1
-        assert len(manager.prompt_groups) == 1
-        assert "Test Addition" in manager.prompt_additions
-        assert 1 in manager.prompt_groups
-    
-    def test_load_from_dict_empty_data(self, manager):
-        """Test loading manager from empty dictionary data."""
-        data = {"additions": {}, "groups": {}}
-        
-        manager.load_from_dict(data)
-        
-        assert len(manager.prompt_additions) == 0
-        assert len(manager.prompt_groups) == 0
-    
-    def test_load_from_dict_missing_sections(self, manager):
-        """Test loading manager from dictionary with missing sections."""
-        data = {}  # Empty dict
-        
-        manager.load_from_dict(data)
-        
-        assert len(manager.prompt_additions) == 0
-        assert len(manager.prompt_groups) == 0
-    
-    def test_load_from_dict_invalid_data_structure(self, manager):
-        """Test loading manager handles invalid data gracefully."""
-        data = {
-            "additions": {
-                "Bad Addition": "not a dict"  # Should be a dict
-            },
-            "groups": {
-                "1": {
-                    "name": "Good Group",
-                    "trigger_words": ["test"],
-                    "additions": [],
-                    "id": 1
-                }
-            }
-        }
-        
-        # Should not raise an exception and should load valid data
-        manager.load_from_dict(data)
-        
-        assert len(manager.prompt_additions) == 0  # Bad data skipped
-        assert len(manager.prompt_groups) == 1     # Good data loaded
-
-
 class TestConfigPath:
     """Test configuration path utilities."""
     
-    @patch('src.extension_config.folder_paths')
-    def test_get_prompt_companion_config_path(self, mock_folder_paths):
-        """Test getting configuration file path."""
-        mock_folder_paths.get_user_directory.return_value = "/mock/user/dir"
-        
-        config_path = get_prompt_companion_config_path()
-        
-        expected_path = os.path.join("/mock/user/dir", "prompt_companion_config.json")
-        assert config_path == expected_path
-        mock_folder_paths.get_user_directory.assert_called_once()
+    def test_config_path_is_set(self):
+        """Test that CONFIG_PATH is properly set."""
+        # Test that CONFIG_PATH exists and contains expected filename
+        assert CONFIG_PATH is not None
+        assert "prompt-companion-config.json" in CONFIG_PATH
 
 
 class TestIntegration:
@@ -420,7 +320,7 @@ class TestIntegration:
     
     def test_full_workflow_additions(self):
         """Test complete workflow with prompt additions."""
-        manager = PromptAdditionManager()
+        manager = ExtensionConfig()
         
         # Create addition
         addition = PromptAddition("Workflow Addition", "test", "positive", "negative")
@@ -431,33 +331,31 @@ class TestIntegration:
         
         # Export to dict
         data = manager.prompt_additions_as_dict()
-        assert "Workflow Addition" in data["additions"]
+        addition_names = [item["name"] for item in data["prompt_additions"]]
+        assert "Workflow Addition" in addition_names
         
-        # Create new manager and load from dict
-        new_manager = PromptAdditionManager()
-        new_manager.load_from_dict(data)
-        
-        # Verify data persisted
-        assert "Workflow Addition" in new_manager.prompt_additions
-        assert new_manager.prompt_additions["Workflow Addition"].trigger_words == "test"
+        # Verify addition details
+        workflow_addition = manager.prompt_additions["Workflow Addition"]
+        assert workflow_addition.trigger_words == "test"
+        assert workflow_addition.positive_prompt_addition_text == "positive"
         
         # Update addition
         updated_addition = PromptAddition(
             "Workflow Addition", "updated_test", "updated_pos", "updated_neg", 
-            new_manager.prompt_additions["Workflow Addition"].id
+            workflow_addition.id
         )
-        new_manager.create_or_update_prompt_addition(updated_addition)
+        manager.create_or_update_prompt_addition(updated_addition)
         
         # Verify update
-        assert new_manager.prompt_additions["Workflow Addition"].trigger_words == "updated_test"
+        assert manager.prompt_additions["Workflow Addition"].trigger_words == "updated_test"
         
         # Delete addition
-        new_manager.delete_prompt_addition("Workflow Addition")
-        assert "Workflow Addition" not in new_manager.prompt_additions
+        manager.delete_prompt_addition("Workflow Addition")
+        assert "Workflow Addition" not in manager.prompt_additions
     
     def test_full_workflow_groups(self):
         """Test complete workflow with prompt groups."""
-        manager = PromptAdditionManager()
+        manager = ExtensionConfig()
         
         # Create group
         group = PromptGroup("Workflow Group", ["test"], [{"addition_id": 1}])
@@ -469,26 +367,22 @@ class TestIntegration:
         
         # Export to dict
         data = manager.prompt_additions_as_dict()
-        assert str(group_id) in data["groups"]
+        group_names = [item["name"] for item in data["prompt_groups"]]
+        assert "Workflow Group" in group_names
         
-        # Create new manager and load from dict
-        new_manager = PromptAdditionManager()
-        new_manager.load_from_dict(data)
-        
-        # Verify data persisted
-        assert group_id in new_manager.prompt_groups
-        assert new_manager.prompt_groups[group_id].name == "Workflow Group"
+        # Verify group details
+        assert manager.prompt_groups[group_id].name == "Workflow Group"
         
         # Update group
         updated_group = PromptGroup("Updated Group", ["updated_test"], [{"addition_id": 2}], group_id)
-        new_manager.create_or_update_prompt_group(updated_group)
+        manager.create_or_update_prompt_group(updated_group)
         
         # Verify update
-        assert new_manager.prompt_groups[group_id].trigger_words == ["updated_test"]
+        assert manager.prompt_groups[group_id].trigger_words == ["updated_test"]
         
         # Delete group
-        new_manager.delete_prompt_group(group_id)
-        assert group_id not in new_manager.prompt_groups
+        manager.delete_prompt_group(group_id)
+        assert group_id not in manager.prompt_groups
 
 
 if __name__ == "__main__":

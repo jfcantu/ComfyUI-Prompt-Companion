@@ -264,8 +264,5 @@ config_data = []
 if os.path.exists(CONFIG_PATH):
     with open(CONFIG_PATH, "r") as config_file:
         config_data = json.load(config_file)
-        print(f"[ComfyUI-Prompt-Companion] Loaded config from: {CONFIG_PATH}")
-else:
-    print(f"[ComfyUI-Prompt-Companion] No existing config found, will create new config at: {CONFIG_PATH}")
 
 PROMPT_ADDITIONS = ExtensionConfig(config_data)

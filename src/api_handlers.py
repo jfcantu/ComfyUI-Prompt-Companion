@@ -129,7 +129,6 @@ async def get_prompt_additions(request: web.Request) -> web.Response:
         JSON response with prompt additions and groups data
     """
     try:
-        print(f"[ComfyUI-Prompt-Companion] get_prompt_additions called, PROMPT_ADDITIONS: {PROMPT_ADDITIONS}")
         if PROMPT_ADDITIONS is None:
             return create_error_response(
                 "Prompt additions not initialized",
@@ -143,7 +142,6 @@ async def get_prompt_additions(request: web.Request) -> web.Response:
         )
     except Exception as e:
         logging.error(f"Server error retrieving prompt additions: {e}")
-        print(f"[ComfyUI-Prompt-Companion] Exception in get_prompt_additions: {e}")
         return create_error_response(
             "Failed to retrieve prompt additions",
             ["An unexpected error occurred"],
@@ -174,12 +172,12 @@ async def write_prompt_addition(request: web.Request) -> web.Response:
     # Input validation
     is_valid, message, errors = validate_request_json(prompt_addition_data)
     if not is_valid:
-        return create_error_response(message, errors, status=400)
+        return create_error_response(message or "Validation error", errors or [], status=400)
     
     # Validate required fields
     is_valid, message, errors = validate_name_field(prompt_addition_data)
     if not is_valid:
-        return create_error_response(message, errors, status=400)
+        return create_error_response(message or "Validation error", errors or [], status=400)
 
     name = prompt_addition_data["name"].strip()
 
@@ -311,12 +309,12 @@ async def write_prompt_group(request: web.Request) -> web.Response:
     # Input validation
     is_valid, message, errors = validate_request_json(prompt_group_data)
     if not is_valid:
-        return create_error_response(message, errors, status=400)
+        return create_error_response(message or "Validation error", errors or [], status=400)
     
     # Validate required fields
     is_valid, message, errors = validate_name_field(prompt_group_data)
     if not is_valid:
-        return create_error_response(message, errors, status=400)
+        return create_error_response(message or "Validation error", errors or [], status=400)
 
     name = prompt_group_data["name"].strip()
 

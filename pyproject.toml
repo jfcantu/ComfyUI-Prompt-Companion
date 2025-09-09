@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ComfyUI-Prompt-Companion"
-version = "0.0.6"
+version = "0.0.7"
 description = "A node that lets you save and reuse parts of prompts (embeddings, quality keywords, and so on.)"
 authors = [
   {name = "John Cantu", email = "jfcantu@gmail.com"}
@@ -21,11 +21,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "aiohttp",  # for testing API handlers
     "bump-my-version",
     "coverage",  # testing
     "mypy",  # linting
     "pre-commit", # runs linting on commit
     "pytest",  # testing
+    "pytest-asyncio",  # for async test support
     "ruff",  # linting
 ]
 

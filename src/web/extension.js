@@ -3,13 +3,75 @@ import { api } from "../../scripts/api.js";
 import { ApiOperations } from "./api-operations.js";
 import { PromptAdditionManager } from "./promptAdditionManager.js";
 
-console.log("Prompt Companion extension loading...");
 
 app.registerExtension({
     name: "ComfyUI.Prompt.Companion",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
+        // Add right-click functionality for all Prompt Companion nodes
+        const promptCompanionNodes = [
+            "PromptCompanion", 
+            "PromptAdditionInput", 
+            "PromptCompanionSingleAddition", 
+            "PromptCompanionPromptGroup", 
+            "PromptCompanionAutoselectGroups", 
+            "PromptCompanionStringsToAddition", 
+            "PromptCompanionAdditionToStrings"
+        ];
+
+        if (promptCompanionNodes.includes(nodeType.comfyClass)) {
+            // Add the right-click menu option for all Prompt Companion nodes
+            nodeType.prototype.getExtraMenuOptions = function(_, options) {
+                try {
+                    options.push({
+                        content: "Edit Prompt Additions",
+                        callback: () => {
+                            try {
+                                // For PromptCompanion, try to get current selection
+                                let currentAdditionName = null;
+                                if (this.promptAdditionNameWidget?.value) {
+                                    currentAdditionName = this.promptAdditionNameWidget.value;
+                                }
+                                
+                                const promptData = {
+                                    prompt_additions: Object.values(this.promptAdditions || {}),
+                                    prompt_groups: this.promptGroups || []
+                                };
+                                const manager = new PromptAdditionManager(promptData, this, currentAdditionName);
+                                manager.show();
+                            } catch (error) {
+                                console.error("Error creating/showing PromptAdditionManager:", error);
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error("Error in getExtraMenuOptions:", error);
+                }
+                return options;
+            };
+
+            // Add cleanup method for proper memory management for all Prompt Companion nodes
+            const originalOnRemoved = nodeType.prototype.onRemoved;
+            
+            nodeType.prototype.onRemoved = function() {
+                // Clean up event listeners to prevent memory leaks
+                if (this.eventListener) {
+                    api.removeEventListener("prompt-companion.addition-list", this.eventListener);
+                    this.eventListener = null;
+                }
+                
+                // Clean up any other references
+                this.promptAdditions = null;
+                this.promptAdditionNames = null;
+                this.promptGroups = null;
+                
+                // Call original cleanup if it exists
+                if (originalOnRemoved) {
+                    originalOnRemoved.call(this);
+                }
+            };
+        }
+
         if (nodeType.comfyClass == "PromptCompanion") {
-            console.log("Registering PromptCompanion node type");
             
             nodeType.prototype.updatePromptData = function (node, promptAdditionsData) {
                 // Handle both old format (array) and new format (object with prompt_additions)
@@ -219,27 +281,6 @@ app.registerExtension({
                 }
             };
             
-            // Add cleanup method for proper memory management
-            // Save the original onRemoved method before overriding
-            const originalOnRemoved = nodeType.prototype.onRemoved;
-            
-            nodeType.prototype.onRemoved = function() {
-                // Clean up event listeners to prevent memory leaks
-                if (this.eventListener) {
-                    api.removeEventListener("prompt-companion.addition-list", this.eventListener);
-                    this.eventListener = null;
-                }
-                
-                // Clean up any other references
-                this.promptAdditions = null;
-                this.promptAdditionNames = null;
-                this.promptGroups = null;
-                
-                // Call original cleanup if it exists
-                if (originalOnRemoved) {
-                    originalOnRemoved.call(this);
-                }
-            };
             
             nodeType.prototype.updatePromptTextboxVisibility = function (node) {
                 // Check if positive_prompt input is connected
@@ -480,38 +521,74 @@ app.registerExtension({
                 }
             };
 
-            nodeType.prototype.getExtraMenuOptions = function(_, options) {
-                console.log("getExtraMenuOptions called for PromptCompanion");
-                try {
-                    options.push({
-                        content: "Edit Prompt Additions",
-                        callback: () => {
-                            console.log("Edit Prompt Additions clicked");
-                            try {
-                                const currentAdditionName = this.promptAdditionNameWidget?.value;
-                                const promptData = {
-                                    prompt_additions: Object.values(this.promptAdditions || {}),
-                                    prompt_groups: this.promptGroups || []
-                                };
-                                const manager = new PromptAdditionManager(promptData, this, currentAdditionName);
-                                manager.show();
-                            } catch (error) {
-                                console.error("Error creating/showing PromptAdditionManager:", error);
-                            }
-                        }
-                    });
-                } catch (error) {
-                    console.error("Error in getExtraMenuOptions:", error);
-                }
-                return options;
-            }
         }
     },
     async nodeCreated(node) {
-        if (node.comfyClass == "PromptCompanion") {
+        // Initialize prompt data for all Prompt Companion nodes
+        const promptCompanionNodes = [
+            "PromptCompanion", 
+            "PromptAdditionInput", 
+            "PromptCompanionSingleAddition", 
+            "PromptCompanionPromptGroup", 
+            "PromptCompanionAutoselectGroups", 
+            "PromptCompanionStringsToAddition", 
+            "PromptCompanionAdditionToStrings"
+        ];
+
+        if (promptCompanionNodes.includes(node.comfyClass)) {
+            // Initialize prompt data for all nodes
             node.promptAdditions = {};
             node.promptAdditionNames = {};
             node.promptGroups = [];
+
+            // Load prompt data
+            const promptAdditions = await ApiOperations.getPromptAdditions();
+            if (node.updatePromptData) {
+                node.updatePromptData(node, promptAdditions);
+            } else {
+                // For nodes without updatePromptData method, set data directly
+                const promptAdditionsData = Array.isArray(promptAdditions) ? 
+                    promptAdditions : 
+                    (promptAdditions.prompt_additions || []);
+                
+                let newPromptAdditionsObject = {};
+                for (const promptAddition of promptAdditionsData) {
+                    newPromptAdditionsObject[promptAddition.name] = promptAddition;
+                }
+
+                node.promptAdditions = newPromptAdditionsObject;
+                node.promptAdditionNames = Object.keys(newPromptAdditionsObject);
+                node.promptGroups = promptAdditions.prompt_groups || [];
+            }
+
+            // Set up event listener for updates
+            const eventListener = (event) => {
+                if (node.updatePromptData) {
+                    node.updatePromptData(node, event.detail);
+                } else {
+                    // For nodes without updatePromptData method, update data directly
+                    const promptAdditionsData = Array.isArray(event.detail) ? 
+                        event.detail : 
+                        (event.detail.prompt_additions || []);
+                    
+                    let newPromptAdditionsObject = {};
+                    for (const promptAddition of promptAdditionsData) {
+                        newPromptAdditionsObject[promptAddition.name] = promptAddition;
+                    }
+
+                    node.promptAdditions = newPromptAdditionsObject;
+                    node.promptAdditionNames = Object.keys(newPromptAdditionsObject);
+                    node.promptGroups = event.detail.prompt_groups || [];
+                }
+            };
+            
+            api.addEventListener("prompt-companion.addition-list", eventListener);
+            
+            // Store the event listener for cleanup
+            node.eventListener = eventListener;
+        }
+
+        if (node.comfyClass == "PromptCompanion") {
 
             // Get widget references
             node.ckptNameWidget = node.widgets?.find((w) => w.name === "ckpt_name");
@@ -618,15 +695,6 @@ app.registerExtension({
                 node.saveAsConfiguration();
             });
 
-            // Load prompt data
-            const promptAdditions = await ApiOperations.getPromptAdditions();
-            node.updatePromptData(node, promptAdditions);
-
-            // Set up event listener for updates with cleanup tracking
-            node.eventListener = (event) => {
-                node.updatePromptData(node, event.detail);
-            };
-            api.addEventListener("prompt-companion.addition-list", node.eventListener);
             
             // Connection change handler removed - keeping textboxes visible at all times
             

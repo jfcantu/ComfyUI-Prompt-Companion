@@ -1398,31 +1398,25 @@ class PromptAdditionManager extends ComfyDialog {
     }
 
     async createNew() {
-        console.log("createNew() called");
         
         // First, clear the selection and text boxes for a fresh start
         this.clearSelection();
         
         try {
             const name = await this.promptForName("Create New Prompt Addition", "Enter name for new prompt addition:");
-            console.log("Received name from prompt:", name);
             
             if (!name) {
-                console.log("No name provided, returning");
                 return;
             }
             
             // Check if name already exists
             if (this.promptAdditions[name]) {
-                console.log("Name already exists:", name);
                 this.updateStatus(`Name "${name}" already exists`, "error");
                 return;
             }
             
             const positiveText = this.positiveTextarea.value.trim();
             const negativeText = this.negativeTextarea.value.trim();
-            console.log("Positive text:", positiveText);
-            console.log("Negative text:", negativeText);
             
             // Create the prompt addition object
             const promptAddition = {
@@ -1433,13 +1427,10 @@ class PromptAdditionManager extends ComfyDialog {
                 // ID will be assigned by the server
             };
             
-            console.log("Created prompt addition object:", promptAddition);
             
             this.updateStatus("Saving new prompt addition...", "info");
-            console.log("About to call writePromptAddition with:", promptAddition);
             
             const result = await ApiOperations.writePromptAddition(promptAddition);
-            console.log("writePromptAddition result:", result);
             
             // Add to local collection
             this.promptAdditions[name] = promptAddition;
@@ -1458,30 +1449,23 @@ class PromptAdditionManager extends ComfyDialog {
     }
     
     async promptForName(title, message, defaultValue = "") {
-        console.log("promptForName called with:", title, message, defaultValue);
         
         return new Promise((resolve) => {
             if (app.extensionManager && app.extensionManager.dialog && app.extensionManager.dialog.prompt) {
-                console.log("Using ComfyUI dialog system");
                 app.extensionManager.dialog.prompt({
                     title: title,
                     message: message,
                     default: defaultValue
                 }).then(result => {
-                    console.log("Dialog result:", result);
                     resolve(result ? result.trim() : null);
                 }).catch((error) => {
-                    console.log("Dialog error:", error);
                     resolve(null);
                 });
             } else {
                 // Fallback to ComfyUI-style prompt
-                console.log("Using ComfyUI prompt fallback");
                 this.comfyPrompt(title, message, defaultValue).then(result => {
-                    console.log("ComfyUI prompt result:", result);
                     resolve(result);
                 }).catch((error) => {
-                    console.log("ComfyUI prompt error:", error);
                     resolve(null);
                 });
             }
@@ -2075,7 +2059,6 @@ class PromptAdditionManager extends ComfyDialog {
                 }
                 
                 // Show success message
-                console.log(`Prompt addition "${config.name}" saved successfully`);
                 this.comfyNotify(`Prompt addition "${config.name}" saved successfully!`, "success");
                 
             } else {

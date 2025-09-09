@@ -5,7 +5,7 @@ This module contains the main PromptCompanion node class that handles
 prompt combination logic for the ComfyUI interface.
 """
 
-from typing import Tuple, Dict, Any, List
+from typing import Tuple, Dict, Any, List, Optional
 
 try:
     import folder_paths
@@ -24,7 +24,7 @@ class PromptAdditionInput:
         self.negative_prompt_addition = negative_prompt_addition
     
     @classmethod
-    def INPUT_TYPES(cls):
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
                 "combine_mode": (
@@ -59,7 +59,7 @@ class PromptAdditionInput:
     FUNCTION = "create_prompt_addition"
     CATEGORY = "jfc"
     
-    def create_prompt_addition(self, combine_mode: str, positive_prompt_addition: str, negative_prompt_addition: str, prompt_addition: 'PromptAdditionInput' = None):
+    def create_prompt_addition(self, combine_mode: str, positive_prompt_addition: str, negative_prompt_addition: str, prompt_addition: Optional['PromptAdditionInput'] = None) -> Tuple['PromptAdditionInput']:
         # Get the input values
         input_positive = ""
         input_negative = ""
@@ -249,7 +249,7 @@ class PromptCompanion:
         negative_addition: str,
         positive_prompt: str,
         negative_prompt: str,
-        prompt_addition: PromptAdditionInput = None,
+        prompt_addition: Optional[PromptAdditionInput] = None,
     ) -> Tuple[str, str, str, str, str, PromptAdditionInput]:
         """
         Combine base prompts with additions based on the selected mode.
@@ -517,17 +517,501 @@ class PromptCompanion:
             return ckpt_name
         else:
             # Invalid checkpoint name, return the first available one
-            print(f"[ComfyUI-Prompt-Companion] Warning: '{ckpt_name}' not found in available checkpoints. Using '{available_checkpoints[0]}' instead.")
             return available_checkpoints[0]
+
+
+class PromptCompanionSingleAddition:
+    """
+    ComfyUI node for applying a single prompt addition with optional chaining.
+    
+    Allows selection of a single prompt addition and optional input chaining.
+    """
+    
+    # ComfyUI node metadata
+    RETURN_TYPES = ("PROMPT_ADDITION",)
+    RETURN_NAMES = ("prompt_addition",)
+    OUTPUT_TOOLTIPS = ("Prompt addition data that can be connected to other nodes",)
+    FUNCTION = "apply_single_addition"
+    CATEGORY = "jfc"
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        """Define the input parameters for the single addition node."""
+        return {
+            "required": {
+                "combine_mode": (
+                    ["prepend", "append"], 
+                    {
+                        "default": "prepend",
+                        "tooltip": "Whether to combine input addition before (prepend) or after (append) the selected addition."
+                    }
+                ),
+                "prompt_addition_name": (
+                    [""] + (list(PROMPT_ADDITIONS.prompt_additions.keys()) 
+                           if PROMPT_ADDITIONS and PROMPT_ADDITIONS.prompt_additions else []),
+                    {
+                        "default": "",
+                        "tooltip": "Select a prompt addition to apply."
+                    }
+                ),
+            },
+            "optional": {
+                "prompt_addition": (
+                    "PROMPT_ADDITION",
+                    {
+                        "tooltip": "Optional prompt addition input to combine with the selected addition."
+                    }
+                ),
+            },
+        }
+
+    def apply_single_addition(
+        self,
+        combine_mode: str,
+        prompt_addition_name: str,
+        prompt_addition: Optional[PromptAdditionInput] = None,
+    ) -> Tuple['PromptAdditionInput']:
+        """Apply the selected prompt addition with optional input combination."""
+        
+        # Get the selected addition
+        selected_positive = ""
+        selected_negative = ""
+        
+        if (prompt_addition_name and PROMPT_ADDITIONS and 
+            PROMPT_ADDITIONS.prompt_additions and 
+            prompt_addition_name in PROMPT_ADDITIONS.prompt_additions):
+            addition = PROMPT_ADDITIONS.prompt_additions[prompt_addition_name]
+            selected_positive = addition.positive_prompt_addition_text or ""
+            selected_negative = addition.negative_prompt_addition_text or ""
+        
+        # Get input values
+        input_positive = ""
+        input_negative = ""
+        
+        if prompt_addition:
+            input_positive = prompt_addition.positive_prompt_addition or ""
+            input_negative = prompt_addition.negative_prompt_addition or ""
+        
+        # Combine based on combine_mode
+        final_positive = ""
+        final_negative = ""
+        
+        if combine_mode == "prepend":
+            # Input first, then selected addition
+            if input_positive and selected_positive:
+                final_positive = f"{input_positive}, {selected_positive}"
+            elif input_positive:
+                final_positive = input_positive
+            elif selected_positive:
+                final_positive = selected_positive
+                
+            if input_negative and selected_negative:
+                final_negative = f"{input_negative}, {selected_negative}"
+            elif input_negative:
+                final_negative = input_negative
+            elif selected_negative:
+                final_negative = selected_negative
+        else:  # append
+            # Selected addition first, then input
+            if selected_positive and input_positive:
+                final_positive = f"{selected_positive}, {input_positive}"
+            elif selected_positive:
+                final_positive = selected_positive
+            elif input_positive:
+                final_positive = input_positive
+                
+            if selected_negative and input_negative:
+                final_negative = f"{selected_negative}, {input_negative}"
+            elif selected_negative:
+                final_negative = selected_negative
+            elif input_negative:
+                final_negative = input_negative
+        
+        return (PromptAdditionInput(final_positive, final_negative),)
+
+
+class PromptCompanionPromptGroup:
+    """
+    ComfyUI node for applying a single prompt group with optional chaining.
+    
+    Allows selection of a single prompt group and optional input chaining.
+    """
+    
+    # ComfyUI node metadata
+    RETURN_TYPES = ("PROMPT_ADDITION",)
+    RETURN_NAMES = ("prompt_addition",)
+    OUTPUT_TOOLTIPS = ("Prompt addition data that can be connected to other nodes",)
+    FUNCTION = "apply_prompt_group"
+    CATEGORY = "jfc"
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        """Define the input parameters for the prompt group node."""
+        return {
+            "required": {
+                "combine_mode": (
+                    ["prepend", "append"], 
+                    {
+                        "default": "prepend",
+                        "tooltip": "Whether to combine input addition before (prepend) or after (append) the group additions."
+                    }
+                ),
+                "prompt_addition_group": (
+                    [""] + ([g.name for g in PROMPT_ADDITIONS.prompt_groups.values()] 
+                           if PROMPT_ADDITIONS and PROMPT_ADDITIONS.prompt_groups else []),
+                    {
+                        "default": "",
+                        "tooltip": "Select a prompt group to apply."
+                    }
+                ),
+            },
+            "optional": {
+                "prompt_addition": (
+                    "PROMPT_ADDITION",
+                    {
+                        "tooltip": "Optional prompt addition input to combine with the group additions."
+                    }
+                ),
+            },
+        }
+
+    def apply_prompt_group(
+        self,
+        combine_mode: str,
+        prompt_addition_group: str,
+        prompt_addition: Optional[PromptAdditionInput] = None,
+    ) -> Tuple['PromptAdditionInput']:
+        """Apply the selected prompt group with optional input combination."""
+        
+        # Get the group additions
+        group_positive = ""
+        group_negative = ""
+        
+        if prompt_addition_group and PROMPT_ADDITIONS and PROMPT_ADDITIONS.prompt_groups:
+            selected_group = None
+            for group in PROMPT_ADDITIONS.prompt_groups.values():
+                if group.name == prompt_addition_group:
+                    selected_group = group
+                    break
+            
+            if selected_group:
+                positive_additions, negative_additions = self._collect_group_additions([selected_group])
+                group_positive = ", ".join(positive_additions)
+                group_negative = ", ".join(negative_additions)
+        
+        # Get input values
+        input_positive = ""
+        input_negative = ""
+        
+        if prompt_addition:
+            input_positive = prompt_addition.positive_prompt_addition or ""
+            input_negative = prompt_addition.negative_prompt_addition or ""
+        
+        # Combine based on combine_mode
+        final_positive = ""
+        final_negative = ""
+        
+        if combine_mode == "prepend":
+            # Input first, then group additions
+            if input_positive and group_positive:
+                final_positive = f"{input_positive}, {group_positive}"
+            elif input_positive:
+                final_positive = input_positive
+            elif group_positive:
+                final_positive = group_positive
+                
+            if input_negative and group_negative:
+                final_negative = f"{input_negative}, {group_negative}"
+            elif input_negative:
+                final_negative = input_negative
+            elif group_negative:
+                final_negative = group_negative
+        else:  # append
+            # Group additions first, then input
+            if group_positive and input_positive:
+                final_positive = f"{group_positive}, {input_positive}"
+            elif group_positive:
+                final_positive = group_positive
+            elif input_positive:
+                final_positive = input_positive
+                
+            if group_negative and input_negative:
+                final_negative = f"{group_negative}, {input_negative}"
+            elif group_negative:
+                final_negative = group_negative
+            elif input_negative:
+                final_negative = input_negative
+        
+        return (PromptAdditionInput(final_positive, final_negative),)
+
+    def _collect_group_additions(self, groups) -> Tuple[List[str], List[str]]:
+        """Collect all prompt additions from the given groups."""
+        positive_additions: List[str] = []
+        negative_additions: List[str] = []
+        
+        for group in groups:
+            if hasattr(group, 'additions') and group.additions:
+                for addition_ref in group.additions:
+                    addition_id = addition_ref.get('addition_id')
+                    if addition_id and PROMPT_ADDITIONS and PROMPT_ADDITIONS.prompt_additions:
+                        for addition in PROMPT_ADDITIONS.prompt_additions.values():
+                            if addition.id == addition_id:
+                                if addition.positive_prompt_addition_text:
+                                    positive_additions.append(addition.positive_prompt_addition_text)
+                                if addition.negative_prompt_addition_text:
+                                    negative_additions.append(addition.negative_prompt_addition_text)
+                                break
+        
+        return positive_additions, negative_additions
+
+
+class PromptCompanionAutoselectGroups:
+    """
+    ComfyUI node for auto-selecting prompt groups based on checkpoint trigger words.
+    
+    Automatically selects prompt groups whose trigger words match the checkpoint name.
+    """
+    
+    # ComfyUI node metadata
+    RETURN_TYPES = ("PROMPT_ADDITION",)
+    RETURN_NAMES = ("prompt_addition",)
+    OUTPUT_TOOLTIPS = ("Prompt addition data that can be connected to other nodes",)
+    FUNCTION = "autoselect_groups"
+    CATEGORY = "jfc"
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        """Define the input parameters for the autoselect groups node."""
+        return {
+            "required": {
+                "combine_mode": (
+                    ["prepend", "append"], 
+                    {
+                        "default": "prepend",
+                        "tooltip": "Whether to combine input addition before (prepend) or after (append) the auto-selected group additions."
+                    }
+                ),
+                "ckpt_name": (
+                    folder_paths.get_filename_list("checkpoints") if folder_paths else ["test_model.safetensors"],
+                    {
+                        "tooltip": "The checkpoint (model) to use for trigger word matching."
+                    }
+                ),
+            },
+            "optional": {
+                "prompt_addition": (
+                    "PROMPT_ADDITION",
+                    {
+                        "tooltip": "Optional prompt addition input to combine with the auto-selected group additions."
+                    }
+                ),
+            },
+        }
+
+    def autoselect_groups(
+        self,
+        combine_mode: str,
+        ckpt_name: str,
+        prompt_addition: Optional[PromptAdditionInput] = None,
+    ) -> Tuple['PromptAdditionInput']:
+        """Auto-select prompt groups based on checkpoint trigger words."""
+        
+        # Find matching groups based on trigger words
+        matching_groups = []
+        if PROMPT_ADDITIONS and PROMPT_ADDITIONS.prompt_groups:
+            for group in PROMPT_ADDITIONS.prompt_groups.values():
+                if self._group_matches_checkpoint(group, ckpt_name):
+                    matching_groups.append(group)
+        
+        # Collect additions from matching groups
+        group_positive = ""
+        group_negative = ""
+        
+        if matching_groups:
+            positive_additions, negative_additions = self._collect_group_additions(matching_groups)
+            group_positive = ", ".join(positive_additions)
+            group_negative = ", ".join(negative_additions)
+        
+        # Get input values
+        input_positive = ""
+        input_negative = ""
+        
+        if prompt_addition:
+            input_positive = prompt_addition.positive_prompt_addition or ""
+            input_negative = prompt_addition.negative_prompt_addition or ""
+        
+        # Combine based on combine_mode
+        final_positive = ""
+        final_negative = ""
+        
+        if combine_mode == "prepend":
+            # Input first, then group additions
+            if input_positive and group_positive:
+                final_positive = f"{input_positive}, {group_positive}"
+            elif input_positive:
+                final_positive = input_positive
+            elif group_positive:
+                final_positive = group_positive
+                
+            if input_negative and group_negative:
+                final_negative = f"{input_negative}, {group_negative}"
+            elif input_negative:
+                final_negative = input_negative
+            elif group_negative:
+                final_negative = group_negative
+        else:  # append
+            # Group additions first, then input
+            if group_positive and input_positive:
+                final_positive = f"{group_positive}, {input_positive}"
+            elif group_positive:
+                final_positive = group_positive
+            elif input_positive:
+                final_positive = input_positive
+                
+            if group_negative and input_negative:
+                final_negative = f"{group_negative}, {input_negative}"
+            elif group_negative:
+                final_negative = group_negative
+            elif input_negative:
+                final_negative = input_negative
+        
+        return (PromptAdditionInput(final_positive, final_negative),)
+
+    def _group_matches_checkpoint(self, group, ckpt_name: str) -> bool:
+        """Check if a group's trigger words match the checkpoint name."""
+        if not hasattr(group, 'trigger_words') or not group.trigger_words:
+            return False
+            
+        ckpt_lower = ckpt_name.lower()
+        for trigger_word in group.trigger_words:
+            if trigger_word and trigger_word.lower() in ckpt_lower:
+                return True
+        return False
+
+    def _collect_group_additions(self, groups) -> Tuple[List[str], List[str]]:
+        """Collect all prompt additions from the given groups."""
+        positive_additions: List[str] = []
+        negative_additions: List[str] = []
+        
+        for group in groups:
+            if hasattr(group, 'additions') and group.additions:
+                for addition_ref in group.additions:
+                    addition_id = addition_ref.get('addition_id')
+                    if addition_id and PROMPT_ADDITIONS and PROMPT_ADDITIONS.prompt_additions:
+                        for addition in PROMPT_ADDITIONS.prompt_additions.values():
+                            if addition.id == addition_id:
+                                if addition.positive_prompt_addition_text:
+                                    positive_additions.append(addition.positive_prompt_addition_text)
+                                if addition.negative_prompt_addition_text:
+                                    negative_additions.append(addition.negative_prompt_addition_text)
+                                break
+        
+        return positive_additions, negative_additions
+
+
+class PromptCompanionStringsToAddition:
+    """
+    Simple utility node to convert two strings into a prompt addition.
+    
+    Takes positive and negative prompt strings and creates a PROMPT_ADDITION output.
+    """
+    
+    # ComfyUI node metadata
+    RETURN_TYPES = ("PROMPT_ADDITION",)
+    RETURN_NAMES = ("prompt_addition",)
+    OUTPUT_TOOLTIPS = ("Prompt addition created from the input strings",)
+    FUNCTION = "strings_to_addition"
+    CATEGORY = "jfc"
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        """Define the input parameters for string to addition conversion."""
+        return {
+            "required": {
+                "positive_prompt": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": "",
+                        "tooltip": "Positive prompt text to convert to prompt addition format"
+                    }
+                ),
+                "negative_prompt": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": "",
+                        "tooltip": "Negative prompt text to convert to prompt addition format"
+                    }
+                ),
+            },
+        }
+
+    def strings_to_addition(
+        self,
+        positive_prompt: str,
+        negative_prompt: str,
+    ) -> Tuple['PromptAdditionInput']:
+        """Convert positive and negative strings to a prompt addition."""
+        return (PromptAdditionInput(positive_prompt, negative_prompt),)
+
+
+class PromptCompanionAdditionToStrings:
+    """
+    Simple utility node to convert a prompt addition back to two strings.
+    
+    Takes a PROMPT_ADDITION input and outputs positive and negative prompt strings.
+    """
+    
+    # ComfyUI node metadata
+    RETURN_TYPES = ("STRING", "STRING")
+    RETURN_NAMES = ("positive_prompt", "negative_prompt")
+    OUTPUT_TOOLTIPS = ("Positive prompt text extracted from the prompt addition",
+                       "Negative prompt text extracted from the prompt addition")
+    FUNCTION = "addition_to_strings"
+    CATEGORY = "jfc"
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        """Define the input parameters for addition to string conversion."""
+        return {
+            "required": {
+                "prompt_addition": (
+                    "PROMPT_ADDITION",
+                    {
+                        "tooltip": "Prompt addition to convert back to separate strings"
+                    }
+                ),
+            },
+        }
+
+    def addition_to_strings(
+        self,
+        prompt_addition: PromptAdditionInput,
+    ) -> Tuple[str, str]:
+        """Convert a prompt addition to positive and negative strings."""
+        positive = prompt_addition.positive_prompt_addition if prompt_addition else ""
+        negative = prompt_addition.negative_prompt_addition if prompt_addition else ""
+        return (positive, negative)
 
 
 # Node registration mapping
 NODE_CLASS_MAPPINGS = {
     "PromptCompanion": PromptCompanion,
-    "PromptAdditionInput": PromptAdditionInput
+    "PromptAdditionInput": PromptAdditionInput,
+    "PromptCompanionSingleAddition": PromptCompanionSingleAddition,
+    "PromptCompanionPromptGroup": PromptCompanionPromptGroup,
+    "PromptCompanionAutoselectGroups": PromptCompanionAutoselectGroups,
+    "PromptCompanionStringsToAddition": PromptCompanionStringsToAddition,
+    "PromptCompanionAdditionToStrings": PromptCompanionAdditionToStrings
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "PromptCompanion": "Prompt Companion",
-    "PromptAdditionInput": "Prompt Companion: Create Prompt Addition"
+    "PromptCompanion": "Prompt Companion: All-In-One",
+    "PromptAdditionInput": "Prompt Companion: Create Prompt Addition",
+    "PromptCompanionSingleAddition": "Prompt Companion: Single Prompt Addition",
+    "PromptCompanionPromptGroup": "Prompt Companion: Prompt Group",
+    "PromptCompanionAutoselectGroups": "Prompt Companion: Autoselect Prompt Groups",
+    "PromptCompanionStringsToAddition": "Prompt Companion: Prompt Strings to Prompt Addition",
+    "PromptCompanionAdditionToStrings": "Prompt Companion: Prompt Addition to Prompt Strings"
 }
