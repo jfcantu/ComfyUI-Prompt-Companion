@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ComfyUI-Prompt-Companion"
-version = "0.0.8"
+version = "0.0.9"
 description = "A node that lets you save and reuse parts of prompts (embeddings, quality keywords, and so on.)"
 authors = [
   {name = "John Cantu", email = "jfcantu@gmail.com"}
