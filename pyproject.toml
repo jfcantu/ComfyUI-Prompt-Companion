@@ -3,11 +3,11 @@ requires = ["setuptools>=70.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "prompt_companion"
-version = "0.0.1"
+name = "ComfyUI-Prompt-Companion"
+version = "0.0.3"
 description = "A node that lets you save and reuse parts of prompts (embeddings, quality keywords, and so on.)"
 authors = [
-  {name = "ComfyUI-Prompt-Companion", email = "jfcantu@gmail.com"}
+  {name = "John Cantu", email = "jfcantu@gmail.com"}
 ]
 readme = "README.md"
 license = {text = "MIT license"}
@@ -30,9 +30,9 @@ dev = [
 ]
 
 [project.urls]
-Repository = "https://github.com/jfcantu/prompt_companion"
-BugTracker = "https://github.com/jfcantu/prompt_companion/issues"
-Documentation = "https://github.com/jfcantu/prompt_companion/wiki"
+Repository = "https://github.com/jfcantu/ComfyUI-Prompt-Companion"
+BugTracker = "https://github.com/jfcantu/ComfyUI-Prompt-Companion/issues"
+Documentation = "https://github.com/jfcantu/ComfyUI-Prompt-Companion/wiki"
 
 
 [tool.comfy]
