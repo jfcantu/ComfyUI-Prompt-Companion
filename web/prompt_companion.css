@@ -1,0 +1,948 @@
+/*
+ * CSS Styles for ComfyUI-Prompt-Companion Web Interface
+ * 
+ * This stylesheet provides styling for all web interface components of the
+ * ComfyUI-Prompt-Companion system, including dialogs, tree views, and controls.
+ */
+
+/* ===== CSS VARIABLES FOR THEMING ===== */
+:root {
+  /* Primary colors matching ComfyUI theme */
+  --pc-primary-color: #007acc;
+  --pc-primary-hover: #005a9e;
+  --pc-secondary-color: #f0f0f0;
+  --pc-background-color: #1e1e1e;
+  --pc-surface-color: #2d2d2d;
+  --pc-surface-hover: #3a3a3a;
+  --pc-text-color: #ffffff;
+  --pc-text-muted: #cccccc;
+  --pc-text-secondary: #999999;
+  --pc-border-color: #404040;
+  --pc-border-hover: #606060;
+  
+  /* Status colors */
+  --pc-success-color: #28a745;
+  --pc-success-bg: rgba(40, 167, 69, 0.1);
+  --pc-warning-color: #ffc107;
+  --pc-warning-bg: rgba(255, 193, 7, 0.1);
+  --pc-error-color: #dc3545;
+  --pc-error-bg: rgba(220, 53, 69, 0.1);
+  --pc-info-color: #17a2b8;
+  --pc-info-bg: rgba(23, 162, 184, 0.1);
+  
+  /* Layout and effects */
+  --pc-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --pc-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --pc-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.2);
+  --pc-border-radius: 4px;
+  --pc-border-radius-lg: 8px;
+  --pc-transition: 0.2s ease;
+  --pc-font-family: 'Arial', sans-serif;
+  --pc-font-family-mono: 'Courier New', monospace;
+  
+  /* Tree view specific */
+  --pc-tree-indent: 20px;
+  --pc-tree-item-height: 28px;
+  --pc-tree-icon-size: 16px;
+}
+
+/* ===== DIALOG SYSTEM STYLES ===== */
+
+.prompt-companion-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.prompt-companion-dialog-content {
+  background: var(--pc-surface-color);
+  border-radius: var(--pc-border-radius-lg);
+  box-shadow: var(--pc-shadow-lg);
+  width: 80%;
+  max-width: 1000px;
+  height: 80%;
+  max-height: 800px;
+  min-width: 720px;
+  min-height: 600px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--pc-border-color);
+  font-family: var(--pc-font-family);
+  
+  position: relative;
+}
+
+/* Add resize handle - STANDARD DIALOG SIZE */
+.prompt-companion-resize-handle {
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  width: 16px !important;  /* Standard resize handle size */
+  height: 16px !important;
+  cursor: nw-resize !important;
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+  /* Standard Windows/macOS style resize handle */
+  background: linear-gradient(-45deg,
+    transparent 0%, transparent 30%,
+    rgba(255, 255, 255, 0.6) 30%, rgba(255, 255, 255, 0.6) 35%,
+    transparent 35%, transparent 45%,
+    rgba(255, 255, 255, 0.6) 45%, rgba(255, 255, 255, 0.6) 50%,
+    transparent 50%, transparent 60%,
+    rgba(255, 255, 255, 0.6) 60%, rgba(255, 255, 255, 0.6) 65%,
+    transparent 65%, transparent 75%,
+    rgba(255, 255, 255, 0.6) 75%, rgba(255, 255, 255, 0.6) 80%,
+    transparent 80%) !important;
+  border-bottom-right-radius: var(--pc-border-radius-lg) !important;
+  /* Larger click area for easier grabbing */
+  padding: 4px !important; /* Extends clickable area to 24x24px total */
+  margin: -4px !important; /* Compensates for padding */
+  /* Force visibility */
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.prompt-companion-resize-handle:hover {
+  background: linear-gradient(-45deg,
+    transparent 0%, transparent 25%,
+    rgba(255, 255, 255, 0.7) 25%, rgba(255, 255, 255, 0.7) 30%,
+    transparent 30%, transparent 45%,
+    rgba(255, 255, 255, 0.7) 45%, rgba(255, 255, 255, 0.7) 50%,
+    transparent 50%, transparent 65%,
+    rgba(255, 255, 255, 0.7) 65%, rgba(255, 255, 255, 0.7) 70%,
+    transparent 70%);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.prompt-companion-resize-handle:active {
+  background: linear-gradient(-45deg,
+    transparent 0%, transparent 25%,
+    rgba(0, 122, 204, 0.8) 25%, rgba(0, 122, 204, 0.8) 30%,
+    transparent 30%, transparent 45%,
+    rgba(0, 122, 204, 0.8) 45%, rgba(0, 122, 204, 0.8) 50%,
+    transparent 50%, transparent 65%,
+    rgba(0, 122, 204, 0.8) 65%, rgba(0, 122, 204, 0.8) 70%,
+    transparent 70%);
+  border-color: var(--pc-primary-color);
+}
+
+.prompt-companion-dialog-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--pc-border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--pc-background-color);
+  flex-shrink: 0;
+}
+
+.prompt-companion-dialog-header h3 {
+  margin: 0;
+  color: var(--pc-text-color);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.prompt-companion-close-btn {
+  background: none;
+  border: none;
+  color: var(--pc-text-muted);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--pc-border-radius);
+  transition: all var(--pc-transition);
+}
+
+.prompt-companion-close-btn:hover {
+  color: var(--pc-text-color);
+  background: var(--pc-surface-hover);
+}
+
+.prompt-companion-dialog-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.prompt-companion-dialog-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--pc-border-color);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  background: var(--pc-background-color);
+  flex-shrink: 0;
+}
+
+/* ===== TWO-PANEL LAYOUT ===== */
+
+.prompt-companion-tree-panel {
+  width: 350px;
+  min-width: 300px;
+  max-width: 500px;
+  border-right: 1px solid var(--pc-border-color);
+  display: flex;
+  flex-direction: column;
+  background: var(--pc-background-color);
+  resize: horizontal;
+  overflow: hidden;
+}
+
+.prompt-companion-edit-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--pc-surface-color);
+  overflow: hidden;
+}
+
+.prompt-companion-panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--pc-border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--pc-background-color);
+  flex-shrink: 0;
+}
+
+.prompt-companion-panel-header h4 {
+  margin: 0;
+  color: var(--pc-text-color);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.prompt-companion-tree-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ===== TREE VIEW STYLES ===== */
+
+.prompt-companion-tree {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.prompt-companion-search-container {
+  padding: 12px;
+  border-bottom: 1px solid var(--pc-border-color);
+  background: var(--pc-background-color);
+}
+
+.prompt-companion-search {
+  width: 100%;
+}
+
+.prompt-companion-tree-container,
+.prompt-companion-tree-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.prompt-companion-tree-content {
+  min-height: 100%;
+}
+
+.prompt-companion-tree-item {
+  display: flex;
+  align-items: center;
+  height: var(--pc-tree-item-height);
+  cursor: pointer;
+  transition: background-color var(--pc-transition);
+  user-select: none;
+  border-bottom: 1px solid transparent;
+  position: relative;
+}
+
+/* Add vertical hierarchy lines */
+.prompt-companion-tree-item::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--pc-tree-indent) / 2 + 8px);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--pc-border-color);
+  opacity: 0.3;
+}
+
+/* Hide the line for root level items */
+.prompt-companion-tree-item[style*="paddingLeft: 10px"]::before {
+  display: none;
+}
+
+/* Add horizontal connecting lines for tree items */
+.prompt-companion-tree-item::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--pc-tree-indent) / 2 + 8px);
+  top: 50%;
+  width: 12px;
+  height: 1px;
+  background: var(--pc-border-color);
+  opacity: 0.3;
+  transform: translateY(-50%);
+}
+
+/* Hide horizontal line for root level items */
+.prompt-companion-tree-item[style*="paddingLeft: 10px"]::after {
+  display: none;
+}
+
+/* Style for deeper nested items - create more subtle visual guides */
+.prompt-companion-tree-item[style*="paddingLeft: 30px"]::before,
+.prompt-companion-tree-item[style*="paddingLeft: 50px"]::before,
+.prompt-companion-tree-item[style*="paddingLeft: 70px"]::before {
+  opacity: 0.2;
+}
+
+/* Add indentation guides for better visual hierarchy */
+.prompt-companion-tree-item-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 8px;
+  gap: 6px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* Create subtle background guides for nested levels */
+.prompt-companion-tree-item[style*="paddingLeft: 30px"] {
+  background-image: linear-gradient(90deg, transparent 0px, rgba(255, 255, 255, 0.02) 1px, transparent 2px);
+}
+
+.prompt-companion-tree-item[style*="paddingLeft: 50px"] {
+  background-image:
+    linear-gradient(90deg, transparent 0px, rgba(255, 255, 255, 0.02) 1px, transparent 2px),
+    linear-gradient(90deg, transparent 20px, rgba(255, 255, 255, 0.02) 21px, transparent 22px);
+}
+
+.prompt-companion-tree-item[style*="paddingLeft: 70px"] {
+  background-image:
+    linear-gradient(90deg, transparent 0px, rgba(255, 255, 255, 0.02) 1px, transparent 2px),
+    linear-gradient(90deg, transparent 20px, rgba(255, 255, 255, 0.02) 21px, transparent 22px),
+    linear-gradient(90deg, transparent 40px, rgba(255, 255, 255, 0.02) 41px, transparent 42px);
+}
+
+.prompt-companion-tree-item:hover {
+  background: var(--pc-surface-hover);
+}
+
+.prompt-companion-tree-item.selected {
+  background: var(--pc-primary-color);
+  color: white;
+}
+
+.prompt-companion-tree-item.selected:hover {
+  background: var(--pc-primary-hover);
+}
+
+.prompt-companion-tree-expander {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--pc-text-muted);
+  transition: color var(--pc-transition);
+  flex-shrink: 0;
+}
+
+.prompt-companion-tree-expander.has-children:hover {
+  color: var(--pc-text-color);
+}
+
+.prompt-companion-tree-icon {
+  font-size: var(--pc-tree-icon-size);
+  flex-shrink: 0;
+}
+
+.prompt-companion-tree-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--pc-text-color);
+}
+
+.prompt-companion-tree-item.selected .prompt-companion-tree-label {
+  color: white;
+}
+
+.prompt-companion-tree-item-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.prompt-companion-tree-tags {
+  font-size: 11px;
+  color: var(--pc-text-secondary);
+  background: var(--pc-background-color);
+  padding: 2px 6px;
+  border-radius: var(--pc-border-radius);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-companion-tree-item.selected .prompt-companion-tree-tags {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.prompt-companion-tree-folder.expanded > .prompt-companion-tree-item-content > .prompt-companion-tree-expander {
+  transform: rotate(0deg);
+}
+
+.prompt-companion-tree-empty,
+.prompt-companion-tree-error {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--pc-text-muted);
+  font-style: italic;
+}
+
+.prompt-companion-tree-error {
+  color: var(--pc-error-color);
+}
+
+/* ===== FORM STYLES ===== */
+
+.prompt-companion-edit-form {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.prompt-companion-form-container {
+  max-width: 600px;
+}
+
+.prompt-companion-form-group {
+  margin-bottom: 20px;
+}
+
+.prompt-companion-form-group label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--pc-text-color);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.prompt-companion-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--pc-border-color);
+  border-radius: var(--pc-border-radius);
+  background: var(--pc-background-color);
+  color: var(--pc-text-color);
+  font-size: 13px;
+  font-family: var(--pc-font-family);
+  transition: border-color var(--pc-transition);
+  box-sizing: border-box;
+}
+
+.prompt-companion-input:focus {
+  outline: none;
+  border-color: var(--pc-primary-color);
+  box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
+
+.prompt-companion-input:hover:not(:focus) {
+  border-color: var(--pc-border-hover);
+}
+
+.prompt-companion-textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: var(--pc-font-family-mono);
+  line-height: 1.4;
+}
+
+.prompt-companion-input[type="number"] {
+  width: auto;
+  min-width: 100px;
+}
+
+select.prompt-companion-input {
+  cursor: pointer;
+}
+
+/* ===== BUTTON STYLES ===== */
+
+.prompt-companion-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--pc-border-radius);
+  background: var(--pc-surface-hover);
+  color: var(--pc-text-color);
+  font-size: 13px;
+  font-family: var(--pc-font-family);
+  cursor: pointer;
+  transition: all var(--pc-transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.prompt-companion-btn:hover {
+  background: var(--pc-border-hover);
+  transform: translateY(-1px);
+}
+
+.prompt-companion-btn:active {
+  transform: translateY(0);
+}
+
+.prompt-companion-btn-primary {
+  background: var(--pc-primary-color);
+  color: white;
+}
+
+.prompt-companion-btn-primary:hover {
+  background: var(--pc-primary-hover);
+}
+
+.prompt-companion-btn-secondary {
+  background: var(--pc-border-color);
+  color: var(--pc-text-color);
+}
+
+.prompt-companion-btn-secondary:hover {
+  background: var(--pc-surface-hover);
+}
+
+.prompt-companion-btn-sm {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.prompt-companion-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ===== VALIDATION STYLES ===== */
+
+.prompt-companion-validation-messages {
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.validation-error {
+  color: var(--pc-error-color);
+  background: var(--pc-error-bg);
+  border: 1px solid var(--pc-error-color);
+  padding: 8px 12px;
+  border-radius: var(--pc-border-radius);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.validation-warning {
+  color: var(--pc-warning-color);
+  background: var(--pc-warning-bg);
+  border: 1px solid var(--pc-warning-color);
+  padding: 8px 12px;
+  border-radius: var(--pc-border-radius);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.validation-info {
+  color: var(--pc-info-color);
+  background: var(--pc-info-bg);
+  border: 1px solid var(--pc-info-color);
+  padding: 8px 12px;
+  border-radius: var(--pc-border-radius);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.prompt-companion-input.has-error {
+  border-color: var(--pc-error-color) !important;
+}
+
+.prompt-companion-input.has-warning {
+  border-color: var(--pc-warning-color) !important;
+}
+
+/* ===== PREVIEW STYLES ===== */
+
+.prompt-companion-preview {
+  background: var(--pc-background-color);
+  border: 1px solid var(--pc-border-color);
+  border-radius: var(--pc-border-radius);
+  padding: 12px;
+  font-family: var(--pc-font-family-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.preview-positive {
+  margin-bottom: 8px;
+}
+
+.preview-negative {
+  margin-bottom: 8px;
+}
+
+.preview-positive strong {
+  color: var(--pc-success-color);
+}
+
+.preview-negative strong {
+  color: var(--pc-error-color);
+}
+
+.preview-empty {
+  color: var(--pc-text-muted);
+  font-style: italic;
+}
+
+/* ===== CONTEXT MENU STYLES ===== */
+
+.prompt-companion-context-menu {
+  background: var(--pc-surface-color);
+  border: 1px solid var(--pc-border-color);
+  border-radius: var(--pc-border-radius);
+  box-shadow: var(--pc-shadow-lg);
+  z-index: 10001;
+  min-width: 180px;
+  padding: 4px 0;
+  font-family: var(--pc-font-family);
+  font-size: 13px;
+}
+
+.prompt-companion-context-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color var(--pc-transition);
+  color: var(--pc-text-color);
+}
+
+.prompt-companion-context-menu-item:hover {
+  background: var(--pc-surface-hover);
+}
+
+.prompt-companion-context-separator {
+  border: none;
+  border-top: 1px solid var(--pc-border-color);
+  margin: 4px 0;
+}
+
+/* ===== MESSAGE STYLES ===== */
+
+.prompt-companion-message {
+  padding: 12px 16px;
+  border-radius: var(--pc-border-radius);
+  font-size: 13px;
+  font-family: var(--pc-font-family);
+  margin-bottom: 8px;
+}
+
+.prompt-companion-message-success {
+  background: var(--pc-success-bg);
+  color: var(--pc-success-color);
+  border: 1px solid var(--pc-success-color);
+}
+
+.prompt-companion-message-error {
+  background: var(--pc-error-bg);
+  color: var(--pc-error-color);
+  border: 1px solid var(--pc-error-color);
+}
+
+.prompt-companion-message-warning {
+  background: var(--pc-warning-bg);
+  color: var(--pc-warning-color);
+  border: 1px solid var(--pc-warning-color);
+}
+
+.prompt-companion-message-info {
+  background: var(--pc-info-bg);
+  color: var(--pc-info-color);
+  border: 1px solid var(--pc-info-color);
+}
+
+/* ===== DRAG AND DROP STYLES ===== */
+
+.prompt-companion-tree-item[draggable="true"] {
+  cursor: grab;
+}
+
+.prompt-companion-tree-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.prompt-companion-tree-item.drag-over {
+  background: var(--pc-primary-color);
+  opacity: 0.7;
+}
+
+/* ===== SCROLLBAR STYLES ===== */
+
+.prompt-companion-tree-content::-webkit-scrollbar,
+.prompt-companion-edit-form::-webkit-scrollbar,
+.prompt-companion-preview::-webkit-scrollbar {
+  width: 8px;
+}
+
+.prompt-companion-tree-content::-webkit-scrollbar-track,
+.prompt-companion-edit-form::-webkit-scrollbar-track,
+.prompt-companion-preview::-webkit-scrollbar-track {
+  background: var(--pc-background-color);
+}
+
+.prompt-companion-tree-content::-webkit-scrollbar-thumb,
+.prompt-companion-edit-form::-webkit-scrollbar-thumb,
+.prompt-companion-preview::-webkit-scrollbar-thumb {
+  background: var(--pc-border-color);
+  border-radius: 4px;
+}
+
+.prompt-companion-tree-content::-webkit-scrollbar-thumb:hover,
+.prompt-companion-edit-form::-webkit-scrollbar-thumb:hover,
+.prompt-companion-preview::-webkit-scrollbar-thumb:hover {
+  background: var(--pc-border-hover);
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+@media (max-width: 1024px) {
+  .prompt-companion-dialog-content {
+    width: 95%;
+    height: 85%;
+    min-width: 600px;
+  }
+  
+  .prompt-companion-tree-panel {
+    width: 280px;
+    min-width: 250px;
+  }
+}
+
+@media (max-width: 768px) {
+  .prompt-companion-dialog-content {
+    width: 98%;
+    height: 90%;
+    min-width: 500px;
+    min-height: 500px;
+  }
+  
+  .prompt-companion-dialog-body {
+    flex-direction: column;
+  }
+  
+  .prompt-companion-tree-panel {
+    width: 100%;
+    height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--pc-border-color);
+    resize: vertical;
+  }
+  
+  .prompt-companion-dialog-header {
+    padding: 12px 16px;
+  }
+  
+  .prompt-companion-dialog-footer {
+    padding: 12px 16px;
+  }
+  
+  .prompt-companion-edit-form {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .prompt-companion-dialog-content {
+    min-width: 400px;
+  }
+  
+  .prompt-companion-tree-actions {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .prompt-companion-btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+/* ===== LOADING STATES ===== */
+
+.prompt-companion-loading {
+  opacity: 0.6;
+  pointer-events: none;
+  position: relative;
+}
+
+.prompt-companion-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--pc-border-color);
+  border-top-color: var(--pc-primary-color);
+  border-radius: 50%;
+  animation: prompt-companion-spin 1s linear infinite;
+}
+
+@keyframes prompt-companion-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== ACCESSIBILITY ===== */
+
+.prompt-companion-tree-item:focus,
+.prompt-companion-input:focus,
+.prompt-companion-btn:focus {
+  outline: 2px solid var(--pc-primary-color);
+  outline-offset: 2px;
+}
+
+.prompt-companion-tree-item:focus {
+  background: var(--pc-surface-hover);
+}
+
+/* ===== HIGH CONTRAST MODE SUPPORT ===== */
+
+@media (prefers-contrast: high) {
+  :root {
+    --pc-border-color: #666666;
+    --pc-border-hover: #888888;
+    --pc-surface-color: #1a1a1a;
+    --pc-surface-hover: #333333;
+  }
+}
+
+/* ===== REDUCED MOTION SUPPORT ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ===== PRINT STYLES ===== */
+
+@media print {
+  .prompt-companion-dialog {
+    position: static;
+    background: white;
+    color: black;
+  }
+  
+  .prompt-companion-dialog-content {
+    box-shadow: none;
+    border: 1px solid black;
+  }
+  
+  .prompt-companion-btn,
+  .prompt-companion-context-menu,
+  .prompt-companion-tree-actions {
+    display: none;
+  }
+}
+
+/* ===== DARK MODE OVERRIDES ===== */
+
+@media (prefers-color-scheme: dark) {
+  /* Already using dark theme by default */
+}
+
+/* ===== LIGHT MODE OVERRIDES (if needed) ===== */
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --pc-background-color: #ffffff;
+    --pc-surface-color: #f8f9fa;
+    --pc-surface-hover: #e9ecef;
+    --pc-text-color: #212529;
+    --pc-text-muted: #6c757d;
+    --pc-text-secondary: #868e96;
+    --pc-border-color: #dee2e6;
+    --pc-border-hover: #adb5bd;
+  }
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+.prompt-companion-hidden {
+  display: none !important;
+}
+
+.prompt-companion-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.prompt-companion-text-center {
+  text-align: center;
+}
+
+.prompt-companion-text-right {
+  text-align: right;
+}
+
+.prompt-companion-mt-1 { margin-top: 4px; }
+.prompt-companion-mt-2 { margin-top: 8px; }
+.prompt-companion-mt-3 { margin-top: 12px; }
+.prompt-companion-mt-4 { margin-top: 16px; }
+
+.prompt-companion-mb-1 { margin-bottom: 4px; }
+.prompt-companion-mb-2 { margin-bottom: 8px; }
+.prompt-companion-mb-3 { margin-bottom: 12px; }
+.prompt-companion-mb-4 { margin-bottom: 16px; }
+
+.prompt-companion-p-1 { padding: 4px; }
+.prompt-companion-p-2 { padding: 8px; }
+.prompt-companion-p-3 { padding: 12px; }
+.prompt-companion-p-4 { padding: 16px; }
